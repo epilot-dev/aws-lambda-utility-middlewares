@@ -1,0 +1,18 @@
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+node_modules
+dist
+samconfig.toml
+.env*
+!.env.sample
+.aws-sam/*
+coverage
+test-report.xml
+.idea
+.DS_Store

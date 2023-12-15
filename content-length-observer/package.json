@@ -1,22 +1,23 @@
 {
   "name": "content-length-observer",
-  "version": "0.0.1",
-  "description": "",
+  "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "repository": "https://github.com/epilot-dev/aws-lambda-utility-middlewares",
+  "license": "MIT",
+  "contributors": [
+    "João Pinho(https://github.com/jpinho)",
+    "Diogo Marques(https://github.com/JoFont)"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/epilot-dev/aws-lambda-utility-middlewares/issues"
-  },
-  "homepage": "https://github.com/epilot-dev/aws-lambda-utility-middlewares#readme",
   "devDependencies": {
-    "esbuild": "0.19.9"
+    "@types/aws-lambda": "^8.10.130",
+    "aws-lambda": "^1.0.7",
+    "esbuild": "^0.19.9"
+  },
+  "dependencies": {
+    "@dazn/lambda-powertools-logger": "^1.28.1",
+    "@middy/core": "^5.1.0"
   }
 }
