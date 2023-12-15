@@ -1,0 +1,22 @@
+{
+  "name": "content-length-observer",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/epilot-dev/aws-lambda-utility-middlewares/issues"
+  },
+  "homepage": "https://github.com/epilot-dev/aws-lambda-utility-middlewares#readme",
+  "devDependencies": {
+    "esbuild": "0.19.9"
+  }
+}
