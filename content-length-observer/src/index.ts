@@ -1,5 +1,4 @@
 import Log from "@dazn/lambda-powertools-logger";
-import middy from "@middy/core";
 import {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,
@@ -18,21 +17,23 @@ interface IWithContentLengthObserver {
   sizeLimitInMB: number;
 }
 
-export const withContentLengthObserver = ({
+const withContentLengthObserver = ({
   thresholdWarn,
   thresholdError,
   sizeLimitInMB: _sizeLimitInMB,
 }: IWithContentLengthObserver) => {
   return {
-    after: async (handlerRequestContext: middy.Request) => {
+    after: async (handlerRequestContext: any) => {
       const event = handlerRequestContext.event as APIGatewayProxyEventV2;
       const requestHeaders = event?.headers || {};
       const response =
         handlerRequestContext.response as APIGatewayProxyStructuredResultV2;
 
+      const teste = "adadadada"
+
+      teste.replaceAll("a", "b")
+
       try {
-        const awsRequestId =
-          handlerRequestContext.event.requestContext.requestId;
         const responseHeadersString = Object.entries(response.headers || {})
           .map(([h, v]) => `${h}: ${v}`)
           .join(" ");
@@ -90,3 +91,5 @@ export const withContentLengthObserver = ({
     },
   };
 };
+
+export default withContentLengthObserver;
