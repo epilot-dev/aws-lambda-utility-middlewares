@@ -13,7 +13,7 @@ export default {
     {
       file: "lib/cjs/index.js",
       format: "cjs", // CommonJS format for Node.js
-      sourcemap: true, // Generate a source map
+      sourcemap: true,
     },
     {
       file: "lib/index.js",
