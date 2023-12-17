@@ -8,7 +8,7 @@ import pkg from "./package.json";
 const extensions = [".js", ".jsx", ".ts", ".tsx"];
 
 export default {
-  input: "src/index.ts", // Path to the entry point of your project
+  input: "src/index.ts", 
   output: [
     {
       file: "lib/cjs/index.js",
