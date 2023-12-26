@@ -23,3 +23,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+test-report.xml
+**/lib/
+stats.html
