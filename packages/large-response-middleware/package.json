@@ -22,7 +22,7 @@
   },
   "files": [
     "lib/",
-    "docs/",
+    "docs/out/Architecture - Sequence Diagram.svg",
     "README.md"
   ],
   "scripts": {
