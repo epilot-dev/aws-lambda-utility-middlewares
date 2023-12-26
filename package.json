@@ -6,6 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
   },
+  "author": "João Pinho <jpe.pinho@gmail.com>",
   "contributors": [
     "João Pinho(https://github.com/jpinho)",
     "Diogo Marques(https://github.com/JoFont)"
