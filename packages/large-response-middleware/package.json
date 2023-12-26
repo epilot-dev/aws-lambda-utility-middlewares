@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares/tree/main/packages/large-response-middleware.git"
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
   },
   "author": "João Pinho <jpe.pinho@gmail.com>",
   "contributors": [
