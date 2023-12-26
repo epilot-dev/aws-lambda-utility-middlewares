@@ -9,7 +9,7 @@ This repo is meant to host a set of useful AWS Lambda Utilities our team has bee
 
 ## Middlewares
 
-- [LargeResponseHandlerMiddleware](./packages/large-response-middleware/), AWS Lambdas have a known limitation regarding the payload size of their responses, which is set to 6MB. This middleware enables a service to log and save large responses to an S3 bucket, thus given developers the ability to look into and debug the cause of such large response. Additionally, this middleware also accepts a special header, that will enable it to reply to the client with a payload $ref pointing to the payload stored in S3. This enables clients to recover gracefully, will they wish to do so.
+- [LargeResponseHandlerMiddleware](./packages/large-response-middleware/), AWS Lambdas have a known limitation regarding the payload size of their responses, currently 6MB. This middleware enables a service to log and save large responses to an S3 bucket, thus allowing developers to look into the cause of those large responses. This middleware also accepts a special header that enables the rewrite of the response with a $ref pointing to the large response stored in S3, allowing clients to recover gracefully.
 
 ## Contributing
 The packages under this repo are free and open source software. PRs welcome!
