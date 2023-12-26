@@ -3,7 +3,7 @@
 Enables Lambdas to return responses larger than 6MB by offloading the content to S3 and returning a reference to the S3 file.
 
 <p align="center">
-<img src="./docs/out/architecture-1/Architecture%20-%20Sequence%20Diagram.svg" />
+  <img src="docs/out/architecture-1/Architecture - Sequence Diagram.svg" />
 </p>
 
 When a client can handle a Large Response, it must send a request with the HTTP Header `Accept: application/large-response.vnd+json`. The `application/large-response.vnd+json` is a custom MIME type indicating that the client agrees to receive a large response payload when necessary. The response body for the `large-response.vnd+json` MIME type is in the following format:
@@ -22,8 +22,8 @@ If the client does not provide the large response MIME type, the Lambda will log
 
 Supported Parameters:
 
-| Parameter       | Type              | Description                                                                  |
-| --------------- | ----------------- | ---------------------------------------------------------------------------- |
+| Parameter       | Type                | Description                                                                  |
+| --------------- | ------------------- | ---------------------------------------------------------------------------- |
 | thresholdWarn   | `number`            | Warning threshold level (percentage of `sizeLimitInMB`), e.g: 0.80           |
 | thresholdError  | `number`            | Error threshold level (percentage of `sizeLimitInMB`), e.g: 0.90             |
 | sizeLimitInMB   | `number`            | Maximum allowed size limit in MB, e.g 6                                      |
