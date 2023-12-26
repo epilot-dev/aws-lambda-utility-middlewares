@@ -26,3 +26,4 @@ yarn-error.log*
 test-report.xml
 **/lib/
 stats.html
+*.tgz
