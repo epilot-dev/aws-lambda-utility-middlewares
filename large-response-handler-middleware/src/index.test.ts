@@ -2,6 +2,8 @@
 import Log from '@dazn/lambda-powertools-logger';
 import * as Lambda from 'aws-lambda';
 
+import { getOrgIdFromContext } from './__tests__/util';
+
 import { LARGE_RESPONSE_MIME_TYPE, withLargeResponseHandler } from './';
 import * as middleware from './';
 
@@ -16,7 +18,13 @@ beforeEach(() => {
 
 describe('withLargeResponseHandler', () => {
   it('should not log WARN or ERROR if thresholds are not met', async () => {
-    const middleware = withLargeResponseHandler({ thresholdWarn: 0.5, thresholdError: 0.9, sizeLimitInMB: 1, outputBucket: 'the-bucket-list' });
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
     const LogWarnSpy = jest.spyOn(Log, 'warn');
     const LogErrorSpy = jest.spyOn(Log, 'error');
 
@@ -34,7 +42,13 @@ describe('withLargeResponseHandler', () => {
   });
 
   it('should log WARN with "Large response detected" when content length is over WARN threshold', async () => {
-    const middleware = withLargeResponseHandler({ thresholdWarn: 0.5, thresholdError: 0.9, sizeLimitInMB: 2, outputBucket: 'the-bucket-list' });
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      sizeLimitInMB: 2,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
     const LogWarnSpy = jest.spyOn(Log, 'warn');
 
     await middleware.after({
@@ -64,7 +78,13 @@ describe('withLargeResponseHandler', () => {
   });
 
   it('should log ERROR with "Large response detected (limit exceeded)" when content length is over ERROR threshold', async () => {
-    const middleware = withLargeResponseHandler({ thresholdWarn: 0.5, thresholdError: 0.9, sizeLimitInMB: 1, outputBucket: 'the-bucket-list' });
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
     const LogErrorSpy = jest.spyOn(Log, 'error');
     const content = Buffer.alloc(1024 * 1024, 'a').toString();
     const requestResponseContext = {
@@ -99,13 +119,19 @@ describe('withLargeResponseHandler', () => {
       content,
       contentType: 'application/json',
       fileName: undefined,
-      orgId: 'unknown',
+      groupId: 'all',
     });
   });
 
   describe('when request header "Accept":"application/large-response.vnd+json" is given', () => {
     it('should not log ERROR with "Large response detected (limit exceeded)" when content length is over ERROR threshold', async () => {
-      const middleware = withLargeResponseHandler({ thresholdWarn: 0.5, thresholdError: 0.9, sizeLimitInMB: 1, outputBucket: 'the-bucket-list' });
+      const middleware = withLargeResponseHandler({
+        thresholdWarn: 0.5,
+        thresholdError: 0.9,
+        sizeLimitInMB: 1,
+        outputBucket: 'the-bucket-list',
+        groupRequestsBy: getOrgIdFromContext,
+      });
       const LogErrorSpy = jest.spyOn(Log, 'error');
       const content = Buffer.alloc(1024 * 1024, 'a').toString();
       const requestResponseContext = {
@@ -139,7 +165,7 @@ describe('withLargeResponseHandler', () => {
         content,
         contentType: 'application/json',
         fileName: 'request-id-123',
-        orgId: 'red-redington',
+        groupId: 'red-redington',
       });
 
       expect(requestResponseContext.response).toStrictEqual({

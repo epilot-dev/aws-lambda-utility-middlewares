@@ -2,10 +2,8 @@ import path from 'path';
 
 import Log from '@dazn/lambda-powertools-logger';
 import middy from '@middy/core';
-import {
-  APIGatewayProxyEventV2,
-  APIGatewayProxyStructuredResultV2,
-} from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+
 import { getS3Client } from './s3/s3-client';
 
 /**
@@ -22,7 +20,7 @@ const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${L
 
 export type FileUploadContext = {
   bucket: string;
-  orgId: string;
+  groupId: string;
   content: unknown;
   contentType: string;
   fileName: string;
@@ -33,11 +31,13 @@ export const withLargeResponseHandler = ({
   thresholdError,
   sizeLimitInMB: _sizeLimitInMB,
   outputBucket,
+  groupRequestsBy,
 }: {
   thresholdWarn: number;
   thresholdError: number;
   sizeLimitInMB: number;
   outputBucket: string;
+  groupRequestsBy?: (event: APIGatewayProxyEventV2) => string;
 }) => {
   return {
     after: async (handlerRequestContext: middy.Request) => {
@@ -46,7 +46,7 @@ export const withLargeResponseHandler = ({
       const response = handlerRequestContext.response as APIGatewayProxyStructuredResultV2;
 
       try {
-        const orgId = getOrgIdFromContext(handlerRequestContext.event);
+        const groupId = groupRequestsBy?.(handlerRequestContext.event) || 'all';
         const awsRequestId = handlerRequestContext.event.requestContext?.requestId;
         const responseHeadersString = response.headers
           ? Object.entries(response.headers)
@@ -65,11 +65,11 @@ export const withLargeResponseHandler = ({
 
         if (contentLengthMB > thresholdWarnInMB) {
           const { url } = await safeUploadLargeResponse({
-            orgId: String(orgId),
+            groupId: String(groupId),
             contentType: 'application/json',
             requestId: awsRequestId,
             responseBody: handlerRequestContext?.response?.body,
-            outputBucket
+            outputBucket,
           });
 
           $payload_ref = url;
@@ -121,32 +121,14 @@ export const withLargeResponseHandler = ({
   };
 };
 
-const getOrgIdFromContext = (event: middy.Request['event']) => {
-  try {
-    return (
-      // check authorizer first
-      event?.requestContext?.authorizer?.lambda?.organizationId ||
-      // check context next
-      Object.entries(event?.headers ?? {}).find(([header, _]) => header.toLowerCase() === 'x-ivy-org-id')?.[1] ||
-      Object.entries(event?.headers ?? {}).find(([header, _]) => header.toLowerCase() === 'x-epilot-org-id')?.[1] ||
-      // fallback to unknown
-      'unknown'
-    );
-  } catch (e) {
-    Log.warn('Failed to get orgId from context', e, event);
-
-    return 'unknown';
-  }
-};
-
 export const safeUploadLargeResponse = async ({
-  orgId,
+  groupId,
   contentType,
   requestId,
   responseBody,
-  outputBucket
+  outputBucket,
 }: {
-  orgId: string;
+  groupId: string;
   requestId: string;
   contentType: string;
   responseBody: string;
@@ -155,7 +137,7 @@ export const safeUploadLargeResponse = async ({
   try {
     return await uploadFile({
       bucket: outputBucket,
-      orgId,
+      groupId,
       content: responseBody,
       contentType: contentType,
       fileName: requestId,
@@ -163,7 +145,7 @@ export const safeUploadLargeResponse = async ({
   } catch (error) {
     Log.error('Failed to write large response to s3 bucket', {
       requestId,
-      orgId,
+      groupId,
       ...(Log.level === 'DEBUG' && { responseBody: responseBody.slice(0, 250) + ' <redacted>' }),
     });
 
@@ -178,7 +160,7 @@ export const safeUploadLargeResponse = async ({
  */
 export const uploadFile = async (params: FileUploadContext) => {
   const client = await getS3Client();
-  const namespace = params.orgId || 'unknown';
+  const namespace = params.groupId || 'all';
   const date = getFormattedDate();
   const outputKey = `${namespace}/${date}/${encodeURIComponent(params.fileName)}`;
 

@@ -1,7 +1,9 @@
 import Log from '@dazn/lambda-powertools-logger';
 import { S3 } from 'aws-sdk';
 
-const AWS_ENDPOINT = process.env.AWS_ENDPOINT || (process.env.STAGE === 'local' ? 'http://host.docker.internal:4566' : undefined);
+const AWS_ENDPOINT =
+  process.env.AWS_ENDPOINT ||
+  (process.env.STAGE === 'local' || process.env.NODE_ENV === 'local' ? 'http://host.docker.internal:4566' : undefined);
 
 export const getS3Client = async (options?: S3.Types.ClientConfiguration) => {
   try {
@@ -10,6 +12,7 @@ export const getS3Client = async (options?: S3.Types.ClientConfiguration) => {
       s3ForcePathStyle: Boolean(AWS_ENDPOINT),
       httpOptions: {
         timeout: 60_000,
+        ...options?.httpOptions,
       },
       ...options,
     });
