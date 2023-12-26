@@ -1,8 +1,11 @@
 {
-  "name": "large-response-handler-middleware",
-  "version": "1.0.0",
-  "repository": "https://github.com/epilot-dev/aws-lambda-utility-middlewares/tree/main/large-response-handler-middleware",
+  "name": "@epilot/large-response-middleware",
+  "version": "0.0.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares/tree/main/packages/large-response-middleware.git"
+  },
   "contributors": [
     "João Pinho(https://github.com/jpinho)",
     "Diogo Marques(https://github.com/JoFont)"

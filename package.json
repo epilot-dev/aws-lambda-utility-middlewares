@@ -1,8 +1,11 @@
 {
-  "name": "aws-lambda-utility-middlewares",
-  "version": "1.0.0",
+  "name": "@epilot/aws-lambda-utility-middlewares",
+  "version": "0.0.1",
   "description": "AWS Lambda Utility Middlewares",
-  "repository": "https://github.com/epilot-dev/aws-lambda-utility-middlewares",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
+  },
   "contributors": [
     "João Pinho(https://github.com/jpinho)",
     "Diogo Marques(https://github.com/JoFont)"
@@ -11,14 +14,15 @@
     "clean": "npm run clean --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "prepublishOnly": "npm lint && npm run build"
   },
   "license": "MIT",
   "files": [
     "README.md"
   ],
   "workspaces": [
-    "large-response-handler-middleware"
+    "packages/large-response-middleware"
   ],
   "devDependencies": {
     "@epilot/eslint-config": "^2.1.0",
