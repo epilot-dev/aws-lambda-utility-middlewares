@@ -1,0 +1,22 @@
+{
+  "name": "aws-lambda-utility-middlewares",
+  "version": "1.0.0",
+  "description": "AWS Lambda Utility Middlewares",
+  "repository": "https://github.com/epilot-dev/aws-lambda-utility-middlewares",
+  "contributors": [
+    "João Pinho(https://github.com/jpinho)",
+    "Diogo Marques(https://github.com/JoFont)"
+  ],
+  "scripts": {
+    "clean": "npm run clean --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "license": "MIT",
+  "files": [
+    "README.md"
+  ],
+  "workspaces": [
+    "large-response-handler-middleware"
+  ]
+}

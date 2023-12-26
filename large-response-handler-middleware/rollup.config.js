@@ -23,7 +23,7 @@ export default {
   ],
   plugins: [
     typescript(), // Compile TypeScript
-    resolve({ extensions }), // Resolve module paths
+    resolve({ preferBuiltins: true, extensions }), // Resolve module paths
     commonjs(), // Convert CommonJS modules to ES6
     babel({ extensions, include: ["src/**/*"], babelHelpers: "bundled" }), // Transpile to ES5 and include polyfills
   ],
