@@ -1,6 +1,6 @@
 {
-  "name": "aws-lambda-utility-middlewares",
-  "version": "1.0.0",
+  "name": "@epilot/aws-lambda-utility-middlewares",
+  "version": "0.0.1",
   "description": "AWS Lambda Utility Middlewares",
   "repository": "https://github.com/epilot-dev/aws-lambda-utility-middlewares",
   "contributors": [
