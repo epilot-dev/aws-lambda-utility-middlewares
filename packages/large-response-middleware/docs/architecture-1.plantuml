@@ -1,0 +1,21 @@
+@startuml "Architecture - Sequence Diagram"
+
+participant Client
+participant "API Gateway"
+participant Lambda
+participant "S3 Bucket"
+
+Client -> "API Gateway": Request data with/without header
+"API Gateway" -> Lambda: Invoke Lambda
+
+alt If "Accept: application:large-response.vnd+json" is present
+    Lambda -> "S3 Bucket": Save large response
+    "S3 Bucket" -> Lambda: Return S3 ref
+    Lambda -> "API Gateway": Return S3 ref `{ $payload_ref: "s3://..." }`
+    "API Gateway" -> Client: Return $payload_ref
+else If request header is not present
+    Lambda -> "API Gateway": Response 500 (Internal Server Error)
+    "API Gateway" -> Client: Response 413 (Payload Too Large)
+end
+
+@enduml
