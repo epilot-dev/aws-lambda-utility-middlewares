@@ -46,5 +46,5 @@ export default {
         open: false,
       }),
   ],
-  external: Object.keys(pkg.dependencies || {}), // Don't bundle dependencies
+  external: Object.keys(pkg.peerDependencies || {}), // Don't bundle dependencies
 };
