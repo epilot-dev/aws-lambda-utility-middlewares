@@ -23,7 +23,7 @@
     "README.md"
   ],
   "workspaces": [
-    "packages/large-response-middleware"
+    "packages/*"
   ],
   "devDependencies": {
     "@epilot/eslint-config": "^2.1.0",

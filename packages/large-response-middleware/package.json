@@ -17,9 +17,6 @@
   "engines": {
     "node": ">=14"
   },
-  "exports": {
-    ".": "./lib"
-  },
   "files": [
     "lib/",
     "docs/out/",
@@ -38,7 +35,7 @@
   },
   "size-limit": [
     {
-      "limit": "3 kB",
+      "limit": "2 kB",
       "path": "lib/index.js"
     }
   ],
