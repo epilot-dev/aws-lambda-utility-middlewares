@@ -30,7 +30,7 @@
     "pre-test": "wait-on $AWS_ENDPOINT/health && npm run setup-local",
     "test": "jest --verbose --detectOpenHandles --forceExit",
     "check-size": "size-limit",
-    "lint": "eslint --ext .ts"
+    "lint": "npx oxlint@latest && eslint --ext .ts"
   },
   "size-limit": [
     {
