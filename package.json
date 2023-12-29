@@ -20,7 +20,8 @@
   },
   "license": "MIT",
   "files": [
-    "README.md"
+    "README.md",
+    "LICENSE.md"
   ],
   "workspaces": [
     "packages/*"
