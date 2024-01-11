@@ -2,6 +2,13 @@
 
 Enables Lambdas to return responses larger than 6MB by offloading the content to S3 and returning a reference to the S3 file.
 
+**Limitations**
+
+- This implementation currently provides support for API Gateway with Lambda Proxy Integration only.
+- There are plans to extend this work as described here [#issue-1](https://github.com/epilot-dev/aws-lambda-utility-middlewares/issues/1)
+
+----
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/epilot-dev/aws-lambda-utility-middlewares/main/packages/large-response-middleware/docs/out/architecture-1/Architecture%20-%20Sequence%20Diagram.svg" />
 </p>
