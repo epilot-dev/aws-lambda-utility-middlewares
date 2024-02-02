@@ -31,12 +31,14 @@ export const withLargeResponseHandler = ({
   thresholdError,
   sizeLimitInMB: _sizeLimitInMB,
   outputBucket,
+  customErrorMessage,
   groupRequestsBy,
 }: {
   thresholdWarn: number;
   thresholdError: number;
   sizeLimitInMB: number;
   outputBucket: string;
+  customErrorMessage?: string | ((event: APIGatewayProxyEventV2) => string);
   groupRequestsBy?: (event: APIGatewayProxyEventV2) => string;
 }) => {
   return {
@@ -100,6 +102,16 @@ export const withLargeResponseHandler = ({
               request: event.requestContext,
               response_size_mb: contentLengthMB.toFixed(2),
               $payload_ref,
+            });
+
+            response.isBase64Encoded = false;
+            response.statusCode = 413;
+            response.body = JSON.stringify({
+              message: customErrorMessage
+                ? typeof customErrorMessage === 'string'
+                  ? customErrorMessage
+                  : customErrorMessage(event)
+                : LARGE_RESPONSE_USER_INFO,
             });
           }
         } else if (contentLengthMB > thresholdWarnInMB) {
