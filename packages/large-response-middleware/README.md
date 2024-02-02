@@ -35,7 +35,7 @@ Supported Parameters:
 | thresholdError | `number` | Error threshold level (percentage of `sizeLimitInMB`), e.g: 0.90 |
 | sizeLimitInMB | `number` | Maximum allowed size limit in MB, e.g 6 |
 | outputBucket | `string` | Identifier or name of the output S3 bucket |
-| customErrorMessage | `string \| (event:APIGatewayProxyEventV2) => string ` | Custom error message to be returned when the response is too large and the client does not support large responses (no accept header). |
+| customErrorMessage | `string \| (event:APIGatewayProxyEventV2) => string ` | Custom error message to be returned when the response is too large and the client does not support large responses (no accept header) |
 | groupRequestsBy | `function - mapper` | Function to group requests, based on API Gateway event V2. Defaults to 'all' |
 
 Example Usage:
