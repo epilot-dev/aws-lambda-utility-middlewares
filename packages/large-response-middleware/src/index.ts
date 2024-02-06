@@ -103,15 +103,14 @@ export const withLargeResponseHandler = ({
               response_size_mb: contentLengthMB.toFixed(2),
               $payload_ref,
             });
-
             response.isBase64Encoded = false;
             response.statusCode = 413;
+            const responseErrorMessage =  customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
+            
             response.body = JSON.stringify({
-              message: customErrorMessage
-                ? typeof customErrorMessage === 'string'
-                  ? customErrorMessage
-                  : customErrorMessage(event)
-                : LARGE_RESPONSE_USER_INFO,
+              message: typeof responseErrorMessage === 'string'
+                  ? responseErrorMessage
+                  : customErrorMessage?.(event) || customErrorMessage,
             });
           }
         } else if (contentLengthMB > thresholdWarnInMB) {
