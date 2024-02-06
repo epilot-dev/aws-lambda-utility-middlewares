@@ -26,6 +26,8 @@ export type FileUploadContext = {
   fileName: string;
 };
 
+export type CustomErrorMessage = string | ((event: APIGatewayProxyEventV2) => string);
+
 export const withLargeResponseHandler = ({
   thresholdWarn,
   thresholdError,
@@ -38,7 +40,7 @@ export const withLargeResponseHandler = ({
   thresholdError: number;
   sizeLimitInMB: number;
   outputBucket: string;
-  customErrorMessage?: string | ((event: APIGatewayProxyEventV2) => string);
+  customErrorMessage?: CustomErrorMessage;
   groupRequestsBy?: (event: APIGatewayProxyEventV2) => string;
 }) => {
   return {
@@ -105,12 +107,8 @@ export const withLargeResponseHandler = ({
             });
             response.isBase64Encoded = false;
             response.statusCode = 413;
-            const responseErrorMessage =  customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
-            
             response.body = JSON.stringify({
-              message: typeof responseErrorMessage === 'string'
-                  ? responseErrorMessage
-                  : customErrorMessage?.(event) || customErrorMessage,
+              message: getCustomErrorMessage(customErrorMessage, event),
             });
           }
         } else if (contentLengthMB > thresholdWarnInMB) {
@@ -199,4 +197,19 @@ function getFormattedDate() {
   const date = new Date();
 
   return date.toISOString().split('T')[0];
+}
+
+function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
+  let message;
+
+  if (typeof customErrorMessage === 'string') {
+    message = customErrorMessage;
+  } else if (typeof customErrorMessage === 'function') {
+    message = customErrorMessage(event);
+  } else {
+    // If customErrorMessage is neither a string nor a function or is not defined, use a fallback.
+    message = customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
+  }
+
+  return message;
 }
