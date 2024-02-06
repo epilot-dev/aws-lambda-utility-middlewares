@@ -200,16 +200,7 @@ function getFormattedDate() {
 }
 
 function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
-  let message;
-
-  if (typeof customErrorMessage === 'string') {
-    message = customErrorMessage;
-  } else if (typeof customErrorMessage === 'function') {
-    message = customErrorMessage(event);
-  } else {
-    // If customErrorMessage is neither a string nor a function or is not defined, use a fallback.
-    message = customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
-  }
-
-  return message;
+  return typeof customErrorMessage === 'function'
+    ? customErrorMessage(event)
+    : customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
 }
