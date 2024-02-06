@@ -26,17 +26,21 @@ export type FileUploadContext = {
   fileName: string;
 };
 
+export type CustomErrorMessage = string | ((event: APIGatewayProxyEventV2) => string);
+
 export const withLargeResponseHandler = ({
   thresholdWarn,
   thresholdError,
   sizeLimitInMB: _sizeLimitInMB,
   outputBucket,
+  customErrorMessage,
   groupRequestsBy,
 }: {
   thresholdWarn: number;
   thresholdError: number;
   sizeLimitInMB: number;
   outputBucket: string;
+  customErrorMessage?: CustomErrorMessage;
   groupRequestsBy?: (event: APIGatewayProxyEventV2) => string;
 }) => {
   return {
@@ -100,6 +104,11 @@ export const withLargeResponseHandler = ({
               request: event.requestContext,
               response_size_mb: contentLengthMB.toFixed(2),
               $payload_ref,
+            });
+            response.isBase64Encoded = false;
+            response.statusCode = 413;
+            response.body = JSON.stringify({
+              message: getCustomErrorMessage(customErrorMessage, event),
             });
           }
         } else if (contentLengthMB > thresholdWarnInMB) {
@@ -188,4 +197,10 @@ function getFormattedDate() {
   const date = new Date();
 
   return date.toISOString().split('T')[0];
+}
+
+function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
+  return typeof customErrorMessage === 'function'
+    ? customErrorMessage(event)
+    : customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
 }

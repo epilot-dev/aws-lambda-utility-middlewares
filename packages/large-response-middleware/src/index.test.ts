@@ -4,8 +4,8 @@ import * as Lambda from 'aws-lambda';
 
 import { getOrgIdFromContext } from './__tests__/util';
 
-import { LARGE_RESPONSE_MIME_TYPE, withLargeResponseHandler } from './';
 import * as middleware from './';
+import { LARGE_RESPONSE_MIME_TYPE, withLargeResponseHandler } from './';
 
 const uploadFileSpy = jest.spyOn(middleware, 'uploadFile').mockResolvedValue({
   filename: 'red-redington/2023-12-13/la-caballa',
@@ -121,6 +121,94 @@ describe('withLargeResponseHandler', () => {
       fileName: undefined,
       groupId: 'all',
     });
+  });
+
+  it('should overwrite response with default ERROR message + correct status when content length is over ERROR threshold', async () => {
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
+    const content = Buffer.alloc(1024 * 1024, 'a').toString();
+    const requestResponseContext = {
+      event: {
+        requestContext: {},
+      },
+      response: {
+        headers: {
+          random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
+        },
+        body: content,
+      },
+    } as any;
+
+    await middleware.after(requestResponseContext);
+
+    expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe(
+      "Call the API with the HTTP header 'Accept: application/large-response.vnd+json' to receive the payload through an S3 ref and avoid HTTP 500 errors.",
+    );
+    expect(requestResponseContext?.response?.statusCode).toBe(413);
+  });
+
+  it('should overwrite response with ERROR message (string) + correct status when content length is over ERROR threshold', async () => {
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      customErrorMessage: 'Custom error message',
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
+    const content = Buffer.alloc(1024 * 1024, 'a').toString();
+    const requestResponseContext = {
+      event: {
+        requestContext: {},
+      },
+      response: {
+        headers: {
+          random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
+        },
+        body: content,
+      },
+    } as any;
+
+    await middleware.after(requestResponseContext);
+
+    expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe('Custom error message');
+    expect(requestResponseContext?.response?.statusCode).toBe(413);
+  });
+
+  it('should overwrite response with custom ERROR message (callback function) + correct status when content length is over ERROR threshold', async () => {
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      customErrorMessage: (event: Lambda.APIGatewayProxyEventV2) =>
+        `Custom error message for ${event.requestContext?.requestId}`,
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
+    const content = Buffer.alloc(1024 * 1024, 'a').toString();
+    const requestResponseContext = {
+      event: {
+        requestContext: {
+          requestId: 'request-id-123',
+        },
+      },
+      response: {
+        headers: {
+          random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
+        },
+        body: content,
+      },
+    } as any;
+
+    await middleware.after(requestResponseContext);
+
+    expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe('Custom error message for request-id-123');
+    expect(requestResponseContext?.response?.statusCode).toBe(413);
   });
 
   describe('when request header "Accept":"application/large-response.vnd+json" is given', () => {
