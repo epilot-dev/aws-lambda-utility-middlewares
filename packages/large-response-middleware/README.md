@@ -23,6 +23,8 @@ When a client can handle a Large Response, it must send a request with the HTTP 
 
 If the client provides the large response MIME type, the Lambda will not log an error using `Log.error`. Instead, it will rewrite the original response with a reference to the offloaded large payload. Furthermore, the rewritten response will include the HTTP header `Content-Type` with the value `application/large-response.vnd+json`.
 
+When the client doesn't provide the large response MIME type, and prefers to deal with the large response as a bad request instead of an HTTP 500, the client can send the `Handle-Large-Response: true` header. The Lambda will rewrite the original response with a custom message and HTTP status code 413 (Payload Too Large). This enables the client to detect a large response and handle it accordingly, by calling the API with a more strict filtering criteria.
+
 If the client does not provide the large response MIME type, the Lambda will log an error with `Log.error` and rewrite the original response with a custom message (can be configured) and HTTP status code 413 (Payload Too Large).
 
 ### Middleware Configuration:

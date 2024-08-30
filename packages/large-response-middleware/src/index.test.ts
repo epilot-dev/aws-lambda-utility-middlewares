@@ -5,7 +5,7 @@ import * as Lambda from 'aws-lambda';
 import { getOrgIdFromContext } from './__tests__/util';
 
 import * as middleware from './';
-import { LARGE_RESPONSE_MIME_TYPE, withLargeResponseHandler } from './';
+import { LARGE_RESPONSE_MIME_TYPE, LARGE_RESPONSE_USER_INFO, withLargeResponseHandler } from './';
 
 const uploadFileSpy = jest.spyOn(middleware, 'uploadFile').mockResolvedValue({
   filename: 'red-redington/2023-12-13/la-caballa',
@@ -63,18 +63,15 @@ describe('withLargeResponseHandler', () => {
       },
     } as any);
 
-    expect(LogWarnSpy).toHaveBeenCalledWith(
-      "Large response detected. Call the API with the HTTP header 'Accept: application/large-response.vnd+json' to receive the payload through an S3 ref and avoid HTTP 500 errors.",
-      {
-        contentLength: 1572872,
-        event: { requestContext: {} },
-        request: {},
-        response_size_mb: '1.50',
-        $payload_ref: expect.stringMatching(
-          /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
-        ),
-      },
-    );
+    expect(LogWarnSpy).toHaveBeenCalledWith(`Large response detected. ${LARGE_RESPONSE_USER_INFO}`, {
+      contentLength: 1572872,
+      event: { requestContext: {} },
+      request: {},
+      response_size_mb: '1.50',
+      $payload_ref: expect.stringMatching(
+        /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
+      ),
+    });
   });
 
   it('should log ERROR with "Large response detected (limit exceeded)" when content length is over ERROR threshold', async () => {
@@ -101,18 +98,15 @@ describe('withLargeResponseHandler', () => {
 
     await middleware.after(requestResponseContext);
 
-    expect(LogErrorSpy).toHaveBeenCalledWith(
-      "Large response detected (limit exceeded). Call the API with the HTTP header 'Accept: application/large-response.vnd+json' to receive the payload through an S3 ref and avoid HTTP 500 errors.",
-      {
-        contentLength: 1939873,
-        event: { requestContext: {} },
-        request: {},
-        response_size_mb: '1.85',
-        $payload_ref: expect.stringMatching(
-          /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
-        ),
-      },
-    );
+    expect(LogErrorSpy).toHaveBeenCalledWith(`Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`, {
+      contentLength: 1939873,
+      event: { requestContext: {} },
+      request: {},
+      response_size_mb: '1.85',
+      $payload_ref: expect.stringMatching(
+        /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
+      ),
+    });
 
     expect(uploadFileSpy).toHaveBeenCalledWith({
       bucket: 'the-bucket-list',
@@ -146,9 +140,7 @@ describe('withLargeResponseHandler', () => {
 
     await middleware.after(requestResponseContext);
 
-    expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe(
-      "Call the API with the HTTP header 'Accept: application/large-response.vnd+json' to receive the payload through an S3 ref and avoid HTTP 500 errors.",
-    );
+    expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe(LARGE_RESPONSE_USER_INFO);
     expect(requestResponseContext?.response?.statusCode).toBe(413);
   });
 
@@ -264,6 +256,63 @@ describe('withLargeResponseHandler', () => {
           random: requestResponseContext.response.headers.random,
           'content-type': 'application/large-response.vnd+json',
         },
+      });
+    });
+  });
+
+  describe('when request header "X-Handle-Large-Response:true" is given', () => {
+    it('should return 413 and not log ERROR with "Large response detected (limit exceeded)" when content length is over ERROR threshold', async () => {
+      const middleware = withLargeResponseHandler({
+        thresholdWarn: 0.5,
+        thresholdError: 0.9,
+        sizeLimitInMB: 1,
+        outputBucket: 'the-bucket-list',
+        groupRequestsBy: getOrgIdFromContext,
+      });
+      const LogErrorSpy = jest.spyOn(Log, 'error');
+      const content = Buffer.alloc(1024 * 1024, 'a').toString();
+      const requestResponseContext = {
+        event: {
+          requestContext: {
+            requestId: 'request-id-123',
+            authorizer: {
+              lambda: {
+                organizationId: 'red-redington',
+              },
+            },
+          } as any,
+          headers: {
+            'X-Handle-Large-Response': 'true',
+          },
+        } as Partial<Lambda.APIGatewayProxyEventV2>,
+        response: {
+          headers: {
+            random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
+          },
+          body: content,
+        },
+      } as any;
+
+      await middleware.after(requestResponseContext);
+
+      expect(LogErrorSpy).not.toHaveBeenCalled();
+      expect(uploadFileSpy).not.toHaveBeenCalled();
+
+      const parsedBody = JSON.parse(requestResponseContext.response.body);
+
+      expect(requestResponseContext.response).toMatchObject({
+        isBase64Encoded: false,
+        statusCode: 413,
+        headers: {
+          random: requestResponseContext.response.headers.random,
+          'content-type': 'application/large-response.vnd+json',
+        },
+      });
+      expect(parsedBody).toMatchObject({
+        meta: {
+          content_length_mb: '1.85',
+        },
+        message: LARGE_RESPONSE_USER_INFO,
       });
     });
   });

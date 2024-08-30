@@ -14,6 +14,11 @@ const config: Config.InitialOptions = {
   maxWorkers: 1, // run tests sequentially
   moduleDirectories: ['node_modules', 'src'],
   modulePaths: ['node_modules'],
+  transform: {
+    '^.+\\.js$': 'babel-jest',
+  },
+  transformIgnorePatterns: ['/node_modules/(?!(yn)/)'],
+  extensionsToTreatAsEsm: ['.ts'],
 };
 
 export default config;

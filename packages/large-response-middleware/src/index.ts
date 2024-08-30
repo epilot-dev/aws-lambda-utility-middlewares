@@ -3,6 +3,7 @@ import path from 'path';
 import Log from '@dazn/lambda-powertools-logger';
 import middy from '@middy/core';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import yn from 'yn';
 
 import { getS3Client } from './s3/s3-client';
 
@@ -16,7 +17,8 @@ const TO_MB_FACTOR = 1_048_576.0;
  */
 export const LIMIT_REQUEST_SIZE_MB = 6.0;
 export const LARGE_RESPONSE_MIME_TYPE = 'application/large-response.vnd+json';
-const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${LARGE_RESPONSE_MIME_TYPE}' to receive the payload through an S3 ref and avoid HTTP 500 errors.`;
+export const HANDLE_LARGE_RESPONSE_HEADER = 'x-handle-large-response';
+export const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${LARGE_RESPONSE_MIME_TYPE}' to receive the payload through an S3 ref and avoid 500 errors or '${HANDLE_LARGE_RESPONSE_HEADER}: true' to receive a 413 Bad Request error and the metadata in the response body.`;
 
 export type FileUploadContext = {
   bucket: string;
@@ -64,10 +66,13 @@ export const withLargeResponseHandler = ({
         const sizeLimitInMB = (_sizeLimitInMB ?? LIMIT_REQUEST_SIZE_MB) * 1.0;
         const thresholdWarnInMB = (thresholdWarn ?? 0.0) * 1.0 * sizeLimitInMB;
         const thresholdErrorInMB = (thresholdError ?? 0.0) * 1.0 * sizeLimitInMB;
+        const clientCanHandleLargeResponseBadRequest = Object.entries(requestHeaders).find(
+          ([header, v]) => header.toLowerCase() === HANDLE_LARGE_RESPONSE_HEADER && yn(v),
+        );
 
         let $payload_ref = null;
 
-        if (contentLengthMB > thresholdWarnInMB) {
+        if (contentLengthMB > thresholdWarnInMB && !clientCanHandleLargeResponseBadRequest) {
           const { url } = await safeUploadLargeResponse({
             groupId: String(groupId),
             contentType: 'application/json',
@@ -97,6 +102,28 @@ export const withLargeResponseHandler = ({
               response_size_mb: contentLengthMB.toFixed(2),
               $payload_ref,
             });
+          } else if (clientCanHandleLargeResponseBadRequest) {
+            response.isBase64Encoded = false;
+            response.statusCode = 413;
+
+            response.body = JSON.stringify({
+              meta: {
+                content_length_mb: contentLengthMB.toFixed(2),
+              },
+              message: getCustomErrorMessage(customErrorMessage, event),
+            });
+
+            response.headers = { ...response.headers, ['content-type']: LARGE_RESPONSE_MIME_TYPE };
+            Log.info(
+              `Large response detected (limit exceeded). Client can handle large response bad request. Rewriting response with { metadata, message } `,
+              {
+                contentLength: aproxContentLengthBytes,
+                event,
+                request: event.requestContext,
+                response_size_mb: contentLengthMB.toFixed(2),
+                $payload_ref,
+              },
+            );
           } else {
             Log.error(`Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`, {
               contentLength: aproxContentLengthBytes,
