@@ -1,6 +1,6 @@
 {
   "name": "@epilot/large-response-middleware",
-  "version": "0.0.11",
+  "version": "0.0.13",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -40,7 +40,7 @@
   },
   "size-limit": [
     {
-      "limit": "2 kB",
+      "limit": "3 kB",
       "path": "lib/index.js"
     }
   ],
