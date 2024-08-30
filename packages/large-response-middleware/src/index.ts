@@ -121,7 +121,6 @@ export const withLargeResponseHandler = ({
                 event,
                 request: event.requestContext,
                 response_size_mb: contentLengthMB.toFixed(2),
-                $payload_ref,
               },
             );
           } else {
