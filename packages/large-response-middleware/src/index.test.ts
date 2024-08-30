@@ -5,7 +5,12 @@ import * as Lambda from 'aws-lambda';
 import { getOrgIdFromContext } from './__tests__/util';
 
 import * as middleware from './';
-import { LARGE_RESPONSE_MIME_TYPE, LARGE_RESPONSE_USER_INFO, withLargeResponseHandler } from './';
+import {
+  LARGE_RESPONSE_HANDLED_INFO,
+  LARGE_RESPONSE_MIME_TYPE,
+  LARGE_RESPONSE_USER_INFO,
+  withLargeResponseHandler,
+} from './';
 
 const uploadFileSpy = jest.spyOn(middleware, 'uploadFile').mockResolvedValue({
   filename: 'red-redington/2023-12-13/la-caballa',
@@ -282,7 +287,7 @@ describe('withLargeResponseHandler', () => {
             },
           } as any,
           headers: {
-            'X-Handle-Large-Response': 'true',
+            'Handle-Large-Response': 'true',
           },
         } as Partial<Lambda.APIGatewayProxyEventV2>,
         response: {
@@ -312,7 +317,7 @@ describe('withLargeResponseHandler', () => {
         meta: {
           content_length_mb: '1.85',
         },
-        message: LARGE_RESPONSE_USER_INFO,
+        message: LARGE_RESPONSE_HANDLED_INFO,
       });
     });
   });

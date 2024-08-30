@@ -17,8 +17,9 @@ const TO_MB_FACTOR = 1_048_576.0;
  */
 export const LIMIT_REQUEST_SIZE_MB = 6.0;
 export const LARGE_RESPONSE_MIME_TYPE = 'application/large-response.vnd+json';
-export const HANDLE_LARGE_RESPONSE_HEADER = 'x-handle-large-response';
+export const HANDLE_LARGE_RESPONSE_HEADER = 'handle-large-response';
 export const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${LARGE_RESPONSE_MIME_TYPE}' to receive the payload through an S3 ref and avoid 500 errors or '${HANDLE_LARGE_RESPONSE_HEADER}: true' to receive a 413 Bad Request error and the metadata in the response body.`;
+export const LARGE_RESPONSE_HANDLED_INFO = `'${HANDLE_LARGE_RESPONSE_HEADER}: true' received means client can handle this event. The response is too large and can't be returned to the client.`;
 
 export type FileUploadContext = {
   bucket: string;
@@ -110,12 +111,12 @@ export const withLargeResponseHandler = ({
               meta: {
                 content_length_mb: contentLengthMB.toFixed(2),
               },
-              message: getCustomErrorMessage(customErrorMessage, event),
+              message: getCustomErrorMessage(customErrorMessage || LARGE_RESPONSE_HANDLED_INFO, event),
             });
 
             response.headers = { ...response.headers, ['content-type']: LARGE_RESPONSE_MIME_TYPE };
             Log.info(
-              `Large response detected (limit exceeded). Client can handle large response bad request. Rewriting response with { metadata, message } `,
+              `Large response detected (limit exceeded). Client signaled that it can handle large responses via 413. Rewriting response with { metadata, message } `,
               {
                 contentLength: aproxContentLengthBytes,
                 event,
