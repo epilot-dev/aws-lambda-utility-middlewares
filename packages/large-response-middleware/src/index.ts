@@ -18,7 +18,7 @@ const TO_MB_FACTOR = 1_048_576.0;
 export const LIMIT_REQUEST_SIZE_MB = 6.0;
 export const LARGE_RESPONSE_MIME_TYPE = 'application/large-response.vnd+json';
 export const HANDLE_LARGE_RESPONSE_HEADER = 'handle-large-response';
-export const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${LARGE_RESPONSE_MIME_TYPE}' to receive the payload through an S3 ref and avoid 500 errors or '${HANDLE_LARGE_RESPONSE_HEADER}: true' to receive a 413 Bad Request error and the metadata in the response body.`;
+export const LARGE_RESPONSE_USER_INFO = `Call the API with the HTTP header 'Accept: ${LARGE_RESPONSE_MIME_TYPE}' to receive the payload through an S3 ref and avoid 413 errors or '${HANDLE_LARGE_RESPONSE_HEADER}: true' to acknowledge you can handle the 413.`;
 export const LARGE_RESPONSE_HANDLED_INFO = `'${HANDLE_LARGE_RESPONSE_HEADER}: true' received means client can handle this event. The response is too large and can't be returned to the client.`;
 
 export type FileUploadContext = {
