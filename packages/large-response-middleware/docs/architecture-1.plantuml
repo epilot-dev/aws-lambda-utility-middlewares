@@ -9,11 +9,17 @@ Client -> "API Gateway": Request data with/without header
 "API Gateway" -> Lambda: Invoke Lambda
 
 alt If "Accept: application:large-response.vnd+json" is present
+    Lambda -> Lambda: Logs info event
     Lambda -> "S3 Bucket": Save large response
     "S3 Bucket" -> Lambda: Return S3 ref
     Lambda -> "API Gateway": Return S3 ref `{ $payload_ref: "s3://..." }`
     "API Gateway" -> Client: Return $payload_ref
+else If "Handle-Large-Request: true" is present
+    Lambda -> Lambda: Logs info event
+    Lambda -> Lambda: Skips S3 content dump
+    Lambda -> Client: Response 413 (Payload Too Large)
 else If request header is not present
+    Lambda -> Lambda: Logs error event
     Lambda -> "API Gateway": Response 500 (Internal Server Error)
     "API Gateway" -> Client: Response 413 (Payload Too Large)
 end
