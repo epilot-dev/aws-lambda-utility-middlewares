@@ -9,23 +9,18 @@
   "author": "João Pinho <jpe.pinho@gmail.com>",
   "contributors": [
     "João Pinho(https://github.com/jpinho)",
-    "Diogo Marques(https://github.com/JoFont)"
+    "Diogo Marques(https://github.com/JoFont)",
+    "Alexandre Marques(https://github.com/alexmarqs)"
   ],
   "scripts": {
-    "clean": "npm run clean --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "prepublishOnly": "npm lint && npm run build"
+    "clean": "pnpm -r clean",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "oxlint": "pnpm dlx oxlint@latest"
   },
   "license": "MIT",
-  "files": [
-    "README.md",
-    "LICENSE.md"
-  ],
-  "workspaces": [
-    "packages/*"
-  ],
   "devDependencies": {
     "@epilot/eslint-config": "^2.1.0",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
@@ -35,5 +30,6 @@
     "eslint-plugin-n": "^16.5.0",
     "eslint-plugin-promise": "^6.1.1",
     "typescript": "^5.3.3"
-  }
+  },
+  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

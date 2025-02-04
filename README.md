@@ -14,7 +14,12 @@ This repository is designed to host a collection of useful AWS Lambda Utilities 
 - [Lambda Server-Timing Middleware (ext)](https://github.com/NishuGoel/lambda-server-timing/tree/main/src): Enables Lambdas to return responses with Server-Timing Header allowing to to pass request-specific timings from the backend to the browser. Allows a server to communicate performance metrics about the request-response cycle to the user agent. It also standardizes a JavaScript interface to enable applications to collect, process, and act on these metrics to optimize application delivery.
 
 ## Contributing
+
 The packages contained in this repository are free and open-source software. Pull requests are welcome!
+
+## Packages releases
+
+This repository requires manual releases of the packages for now. We will be including `changeset` in the future to manage releases of the packages in the monorepo.
 
 ## Disclaimer
 
