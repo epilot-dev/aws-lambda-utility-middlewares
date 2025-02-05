@@ -1,12 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Log from '@dazn/lambda-powertools-logger';
-import { getOrgIdFromContext } from './__tests__/util';
-import {LARGE_RESPONSE_HANDLED_INFO, LARGE_RESPONSE_MIME_TYPE, LARGE_RESPONSE_USER_INFO, withLargeResponseHandler} from './';
-import { uploadFile } from './file-storage-service';
 import * as Lambda from 'aws-lambda';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { getOrgIdFromContext } from './__tests__/util';
+import { uploadFile } from './file-storage-service';
+
+import {
+  LARGE_RESPONSE_HANDLED_INFO,
+  LARGE_RESPONSE_MIME_TYPE,
+  LARGE_RESPONSE_USER_INFO,
+  withLargeResponseHandler,
+} from './';
 
 vi.mock('@dazn/lambda-powertools-logger');
-vi.mock('./file-storage-service')
+vi.mock('./file-storage-service');
 
 const uploadFileMock = vi.mocked(uploadFile);
 uploadFileMock.mockResolvedValue({
@@ -14,7 +22,6 @@ uploadFileMock.mockResolvedValue({
   filename: 'red-redington/2023-12-13/la-caballa',
 });
 const mockLogger = vi.mocked(Log);
-
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -49,8 +56,8 @@ describe('withLargeResponseHandler', () => {
       sizeLimitInMB: 2,
       outputBucket: 'the-bucket-list',
       groupRequestsBy: getOrgIdFromContext,
-    })
-    
+    });
+
     await middleware.after({
       event: {
         requestContext: {},
@@ -82,7 +89,7 @@ describe('withLargeResponseHandler', () => {
       outputBucket: 'the-bucket-list',
       groupRequestsBy: getOrgIdFromContext,
     });
-    
+
     const content = Buffer.alloc(1024 * 1024, 'a').toString();
     const requestResponseContext = {
       event: {
@@ -98,15 +105,18 @@ describe('withLargeResponseHandler', () => {
 
     await middleware.after(requestResponseContext);
 
-    expect(mockLogger.error).toHaveBeenCalledWith(`Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`, {
-      contentLength: 1939873,
-      event: { requestContext: {} },
-      request: {},
-      response_size_mb: '1.85',
-      $payload_ref: expect.stringMatching(
-        /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
-      ),
-    });
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      `Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`,
+      {
+        contentLength: 1939873,
+        event: { requestContext: {} },
+        request: {},
+        response_size_mb: '1.85',
+        $payload_ref: expect.stringMatching(
+          /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
+        ),
+      },
+    );
 
     expect(uploadFileMock).toHaveBeenCalledWith({
       bucket: 'the-bucket-list',
@@ -171,7 +181,6 @@ describe('withLargeResponseHandler', () => {
     expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe('Custom error message');
     expect(requestResponseContext?.response?.statusCode).toBe(413);
   });
-
 
   it('should overwrite response with custom ERROR message (callback function) + correct status when content length is over ERROR threshold', async () => {
     const middleware = withLargeResponseHandler({
