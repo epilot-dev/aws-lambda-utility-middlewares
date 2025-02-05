@@ -4,8 +4,8 @@
  * Config fragments to be used by all module
  * format environments
  */
-const sharedPresets = ["@babel/preset-typescript"];
-const sharedIgnoredFiles = ["src/**/*.test.ts"];
+const sharedPresets = ['@babel/preset-typescript'];
+const sharedIgnoredFiles = ['src/**/*.test.ts'];
 const sharedConfig = {
   ignore: sharedIgnoredFiles,
   presets: sharedPresets,
@@ -16,10 +16,10 @@ const sharedConfig = {
  */
 const bundlePresets = [
   [
-    "@babel/preset-env",
+    '@babel/preset-env',
     {
-      targets: "node 14",
-      useBuiltIns: "usage",
+      targets: 'node 14',
+      useBuiltIns: 'usage',
       corejs: 3,
     },
   ],
@@ -39,7 +39,7 @@ module.exports = {
     unBundled: sharedConfig,
     bundled: bundleConfig,
     test: {
-      presets: ["@babel/preset-env", ...sharedPresets],
+      presets: ['@babel/preset-env', ...sharedPresets],
     },
   },
 };

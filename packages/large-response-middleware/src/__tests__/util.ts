@@ -1,4 +1,4 @@
-import middy from '@middy/core';
+import type middy from '@middy/core';
 
 export const getOrgIdFromContext = (event: middy.Request['event']) => {
   try {

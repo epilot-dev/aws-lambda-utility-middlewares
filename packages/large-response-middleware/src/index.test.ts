@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Log from '@dazn/lambda-powertools-logger';
-import * as Lambda from 'aws-lambda';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getOrgIdFromContext } from './__tests__/util';
+import { uploadFile } from './file-storage-service';
 
-import * as middleware from './';
 import {
   LARGE_RESPONSE_HANDLED_INFO,
   LARGE_RESPONSE_MIME_TYPE,
@@ -12,13 +13,18 @@ import {
   withLargeResponseHandler,
 } from './';
 
-const uploadFileSpy = jest.spyOn(middleware, 'uploadFile').mockResolvedValue({
-  filename: 'red-redington/2023-12-13/la-caballa',
+vi.mock('@dazn/lambda-powertools-logger');
+vi.mock('./file-storage-service');
+
+const uploadFileMock = vi.mocked(uploadFile);
+uploadFileMock.mockResolvedValue({
   url: 'http://localhost:4566/the-bucket-list/red-redington/2023-12-13/la-caballa',
+  filename: 'red-redington/2023-12-13/la-caballa',
 });
+const mockLogger = vi.mocked(Log);
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('withLargeResponseHandler', () => {
@@ -30,9 +36,6 @@ describe('withLargeResponseHandler', () => {
       outputBucket: 'the-bucket-list',
       groupRequestsBy: getOrgIdFromContext,
     });
-    const LogWarnSpy = jest.spyOn(Log, 'warn');
-    const LogErrorSpy = jest.spyOn(Log, 'error');
-
     await middleware.after({
       event: {
         requestContext: {},
@@ -40,10 +43,11 @@ describe('withLargeResponseHandler', () => {
       response: {
         body: '',
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any);
 
-    expect(LogWarnSpy).toHaveBeenCalledTimes(0);
-    expect(LogErrorSpy).toHaveBeenCalledTimes(0);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(0);
+    expect(mockLogger.error).toHaveBeenCalledTimes(0);
   });
 
   it('should log WARN with "Large response detected" when content length is over WARN threshold', async () => {
@@ -54,7 +58,6 @@ describe('withLargeResponseHandler', () => {
       outputBucket: 'the-bucket-list',
       groupRequestsBy: getOrgIdFromContext,
     });
-    const LogWarnSpy = jest.spyOn(Log, 'warn');
 
     await middleware.after({
       event: {
@@ -66,9 +69,10 @@ describe('withLargeResponseHandler', () => {
         },
         body: Buffer.alloc(1024 * 1024, 'a').toString(), // 1MB
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any);
 
-    expect(LogWarnSpy).toHaveBeenCalledWith(`Large response detected. ${LARGE_RESPONSE_USER_INFO}`, {
+    expect(mockLogger.warn).toHaveBeenCalledWith(`Large response detected. ${LARGE_RESPONSE_USER_INFO}`, {
       contentLength: 1572872,
       event: { requestContext: {} },
       request: {},
@@ -87,7 +91,7 @@ describe('withLargeResponseHandler', () => {
       outputBucket: 'the-bucket-list',
       groupRequestsBy: getOrgIdFromContext,
     });
-    const LogErrorSpy = jest.spyOn(Log, 'error');
+
     const content = Buffer.alloc(1024 * 1024, 'a').toString();
     const requestResponseContext = {
       event: {
@@ -99,21 +103,25 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
 
-    expect(LogErrorSpy).toHaveBeenCalledWith(`Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`, {
-      contentLength: 1939873,
-      event: { requestContext: {} },
-      request: {},
-      response_size_mb: '1.85',
-      $payload_ref: expect.stringMatching(
-        /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
-      ),
-    });
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      `Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`,
+      {
+        contentLength: 1939873,
+        event: { requestContext: {} },
+        request: {},
+        response_size_mb: '1.85',
+        $payload_ref: expect.stringMatching(
+          /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
+        ),
+      },
+    );
 
-    expect(uploadFileSpy).toHaveBeenCalledWith({
+    expect(uploadFileMock).toHaveBeenCalledWith({
       bucket: 'the-bucket-list',
       content,
       contentType: 'application/json',
@@ -141,6 +149,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -169,6 +178,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -181,7 +191,7 @@ describe('withLargeResponseHandler', () => {
     const middleware = withLargeResponseHandler({
       thresholdWarn: 0.5,
       thresholdError: 0.9,
-      customErrorMessage: (event: Lambda.APIGatewayProxyEventV2) =>
+      customErrorMessage: (event: APIGatewayProxyEventV2) =>
         `Custom error message for ${event.requestContext?.requestId}`,
       sizeLimitInMB: 1,
       outputBucket: 'the-bucket-list',
@@ -200,6 +210,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -217,7 +228,6 @@ describe('withLargeResponseHandler', () => {
         outputBucket: 'the-bucket-list',
         groupRequestsBy: getOrgIdFromContext,
       });
-      const LogErrorSpy = jest.spyOn(Log, 'error');
       const content = Buffer.alloc(1024 * 1024, 'a').toString();
       const requestResponseContext = {
         event: {
@@ -228,24 +238,26 @@ describe('withLargeResponseHandler', () => {
                 organizationId: 'red-redington',
               },
             },
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           } as any,
           headers: {
             Accept: LARGE_RESPONSE_MIME_TYPE,
           },
-        } as Partial<Lambda.APIGatewayProxyEventV2>,
+        } as Partial<APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
           },
           body: content,
         },
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       } as any;
 
       await middleware.after(requestResponseContext);
 
-      expect(LogErrorSpy).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
 
-      expect(uploadFileSpy).toHaveBeenCalledWith({
+      expect(uploadFileMock).toHaveBeenCalledWith({
         bucket: 'the-bucket-list',
         content,
         contentType: 'application/json',
@@ -274,7 +286,6 @@ describe('withLargeResponseHandler', () => {
         outputBucket: 'the-bucket-list',
         groupRequestsBy: getOrgIdFromContext,
       });
-      const LogErrorSpy = jest.spyOn(Log, 'error');
       const content = Buffer.alloc(1024 * 1024, 'a').toString();
       const requestResponseContext = {
         event: {
@@ -285,23 +296,25 @@ describe('withLargeResponseHandler', () => {
                 organizationId: 'red-redington',
               },
             },
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           } as any,
           headers: {
             'Handle-Large-Response': 'true',
           },
-        } as Partial<Lambda.APIGatewayProxyEventV2>,
+        } as Partial<APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
           },
           body: content,
         },
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       } as any;
 
       await middleware.after(requestResponseContext);
 
-      expect(LogErrorSpy).not.toHaveBeenCalled();
-      expect(uploadFileSpy).not.toHaveBeenCalled();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(uploadFileMock).not.toHaveBeenCalled();
 
       const parsedBody = JSON.parse(requestResponseContext.response.body);
 

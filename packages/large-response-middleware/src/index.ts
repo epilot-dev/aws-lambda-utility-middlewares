@@ -1,11 +1,9 @@
-import path from 'path';
-
 import Log from '@dazn/lambda-powertools-logger';
-import middy from '@middy/core';
+import type middy from '@middy/core';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import yn from 'yn';
 
-import { getS3Client } from './s3/s3-client';
+import { uploadFile } from './file-storage-service';
 
 /**
  * Conversion factor from Bytes to MB.
@@ -70,7 +68,6 @@ export const withLargeResponseHandler = ({
         const clientCanHandleLargeResponseBadRequest = Object.entries(requestHeaders).find(
           ([header, v]) => header.toLowerCase() === HANDLE_LARGE_RESPONSE_HEADER && yn(v),
         );
-
         let $payload_ref = null;
 
         if (contentLengthMB > thresholdWarnInMB && !clientCanHandleLargeResponseBadRequest) {
@@ -169,7 +166,7 @@ export const safeUploadLargeResponse = async ({
   contentType: string;
   responseBody: string;
   outputBucket: string;
-}): Promise<{ url?: string; outputKey?: string }> => {
+}): Promise<{ url?: string; filename?: string }> => {
   try {
     return await uploadFile({
       bucket: outputBucket,
@@ -180,6 +177,7 @@ export const safeUploadLargeResponse = async ({
     });
   } catch (error) {
     Log.error('Failed to write large response to s3 bucket', {
+      error,
       requestId,
       groupId,
       ...(Log.level === 'DEBUG' && { responseBody: responseBody.slice(0, 250) + ' <redacted>' }),
@@ -189,45 +187,8 @@ export const safeUploadLargeResponse = async ({
   }
 };
 
-/**
- * Uploads a file to S3.
- *
- * @returns a presigned URL expiring in 60 minutes for easy access.
- */
-export const uploadFile = async (params: FileUploadContext) => {
-  const client = await getS3Client();
-  const namespace = params.groupId || 'all';
-  const date = getFormattedDate();
-  const outputKey = `${namespace}/${date}/${encodeURIComponent(params.fileName)}`;
-
-  await client
-    .putObject({
-      Bucket: params.bucket,
-      Key: outputKey,
-      ContentType: params.contentType || 'text/plain',
-      Body: JSON.stringify(params.content || {}),
-      ACL: 'private',
-    })
-    .promise();
-
-  const url = await client.getSignedUrl('getObject', {
-    Expires: 3600,
-    Bucket: params.bucket,
-    Key: outputKey,
-    ResponseContentDisposition: `inline;filename=${path.basename(outputKey)}`,
-  });
-
-  return { url, filename: outputKey };
-};
-
-function getFormattedDate() {
-  const date = new Date();
-
-  return date.toISOString().split('T')[0];
-}
-
 function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
   return typeof customErrorMessage === 'function'
     ? customErrorMessage(event)
-    : customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
+    : (customErrorMessage ?? LARGE_RESPONSE_USER_INFO);
 }
