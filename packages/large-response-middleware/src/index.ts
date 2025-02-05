@@ -1,5 +1,5 @@
 import Log from '@dazn/lambda-powertools-logger';
-import middy from '@middy/core';
+import type middy from '@middy/core';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import yn from 'yn';
 
@@ -192,5 +192,5 @@ export const safeUploadLargeResponse = async ({
 function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
   return typeof customErrorMessage === 'function'
     ? customErrorMessage(event)
-    : customErrorMessage ?? LARGE_RESPONSE_USER_INFO;
+    : (customErrorMessage ?? LARGE_RESPONSE_USER_INFO);
 }

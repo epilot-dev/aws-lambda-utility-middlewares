@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Log from '@dazn/lambda-powertools-logger';
-import * as Lambda from 'aws-lambda';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getOrgIdFromContext } from './__tests__/util';
 import { uploadFile } from './file-storage-service';
@@ -43,6 +43,7 @@ describe('withLargeResponseHandler', () => {
       response: {
         body: '',
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any);
 
     expect(mockLogger.warn).toHaveBeenCalledTimes(0);
@@ -68,6 +69,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: Buffer.alloc(1024 * 1024, 'a').toString(), // 1MB
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any);
 
     expect(mockLogger.warn).toHaveBeenCalledWith(`Large response detected. ${LARGE_RESPONSE_USER_INFO}`, {
@@ -101,6 +103,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -146,6 +149,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -174,6 +178,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -186,7 +191,7 @@ describe('withLargeResponseHandler', () => {
     const middleware = withLargeResponseHandler({
       thresholdWarn: 0.5,
       thresholdError: 0.9,
-      customErrorMessage: (event: Lambda.APIGatewayProxyEventV2) =>
+      customErrorMessage: (event: APIGatewayProxyEventV2) =>
         `Custom error message for ${event.requestContext?.requestId}`,
       sizeLimitInMB: 1,
       outputBucket: 'the-bucket-list',
@@ -205,6 +210,7 @@ describe('withLargeResponseHandler', () => {
         },
         body: content,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } as any;
 
     await middleware.after(requestResponseContext);
@@ -232,17 +238,19 @@ describe('withLargeResponseHandler', () => {
                 organizationId: 'red-redington',
               },
             },
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           } as any,
           headers: {
             Accept: LARGE_RESPONSE_MIME_TYPE,
           },
-        } as Partial<Lambda.APIGatewayProxyEventV2>,
+        } as Partial<APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
           },
           body: content,
         },
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       } as any;
 
       await middleware.after(requestResponseContext);
@@ -288,17 +296,19 @@ describe('withLargeResponseHandler', () => {
                 organizationId: 'red-redington',
               },
             },
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           } as any,
           headers: {
             'Handle-Large-Response': 'true',
           },
-        } as Partial<Lambda.APIGatewayProxyEventV2>,
+        } as Partial<APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
           },
           body: content,
         },
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       } as any;
 
       await middleware.after(requestResponseContext);

@@ -1,8 +1,8 @@
-import path from 'path';
+import path from 'node:path';
 
 import { getS3Client } from './s3/s3-client';
 
-import { FileUploadContext } from '.';
+import type { FileUploadContext } from '.';
 
 /**
  * Uploads a file to S3.

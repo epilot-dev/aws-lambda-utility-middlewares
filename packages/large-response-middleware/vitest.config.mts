@@ -9,8 +9,8 @@ export default defineConfig({
     watch: false,
     poolOptions: {
       threads: {
-        singleThread: true
-      }
+        singleThread: true,
+      },
     },
   },
 });

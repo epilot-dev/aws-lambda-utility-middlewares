@@ -6,12 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
   },
-  "keywords": [
-    "aws",
-    "lambda",
-    "middleware",
-    "large-response"
-  ],
+  "keywords": ["aws", "lambda", "middleware", "large-response"],
   "author": "João Pinho <jpe.pinho@gmail.com>",
   "contributors": [
     "João Pinho(https://github.com/jpinho)",
@@ -24,10 +19,7 @@
   "engines": {
     "node": ">=14"
   },
-  "files": [
-    "lib/",
-    "README.md"
-  ],
+  "files": ["lib/", "README.md"],
   "scripts": {
     "clean": "rm -rf lib",
     "build:declarations": "tsc -p tsconfig.json",
@@ -37,7 +29,7 @@
     "pre-test": "wait-on $AWS_ENDPOINT/health && npm run setup-local",
     "test": "vitest",
     "check-size": "size-limit",
-    "lint": "eslint --ext .ts",
+    "lint": "biome check --write .",
     "prepublishOnly": "pnpm lint && pnpm build",
     "typecheck": "tsc --noEmit"
   },

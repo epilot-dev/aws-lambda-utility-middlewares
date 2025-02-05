@@ -18,17 +18,12 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "lint:repo": " pnpm dlx oxlint@latest"
+    "lint:repo": "pnpm dlx oxlint@latest",
+    "format": "biome format --write ."
   },
   "license": "MIT",
   "devDependencies": {
-    "@epilot/eslint-config": "^2.1.0",
-    "@typescript-eslint/eslint-plugin": "^6.16.0",
-    "eslint": "^8.56.0",
-    "eslint-config-standard-with-typescript": "^43.0.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-n": "^16.5.0",
-    "eslint-plugin-promise": "^6.1.1",
+    "@biomejs/biome": "1.9.4",
     "typescript": "^5.3.3"
   },
   "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
