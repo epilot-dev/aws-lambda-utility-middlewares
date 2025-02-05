@@ -18,7 +18,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "oxlint": "pnpm dlx oxlint@latest"
+    "lint:repo": " pnpm dlx oxlint@latest"
   },
   "license": "MIT",
   "devDependencies": {

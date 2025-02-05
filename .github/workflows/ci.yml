@@ -31,7 +31,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Oxlint
-        run: pnpm dlx oxlint@latest --yes
+        run: pnpm dlx oxlint@latest
 
       - name: Lint
         run: pnpm lint
