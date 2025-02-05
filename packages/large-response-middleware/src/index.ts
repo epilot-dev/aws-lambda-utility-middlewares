@@ -3,7 +3,6 @@ import middy from '@middy/core';
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import yn from 'yn';
 
-
 import { uploadFile } from './file-storage-service';
 
 /**
@@ -189,8 +188,6 @@ export const safeUploadLargeResponse = async ({
     return {};
   }
 };
-
-
 
 function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
   return typeof customErrorMessage === 'function'

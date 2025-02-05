@@ -1,7 +1,8 @@
-import path from "path";
-import { getS3Client } from "./s3/s3-client";
-import { FileUploadContext } from ".";
+import path from 'path';
 
+import { getS3Client } from './s3/s3-client';
+
+import { FileUploadContext } from '.';
 
 /**
  * Uploads a file to S3.
@@ -34,10 +35,8 @@ export const uploadFile = async (params: FileUploadContext) => {
   return { url, filename: outputKey };
 };
 
-
 function getFormattedDate() {
   const date = new Date();
 
   return date.toISOString().split('T')[0];
 }
-
