@@ -19,7 +19,7 @@ The packages contained in this repository are free and open-source software. Pul
 
 ## Packages releases
 
-This repository requires manual releases of the packages for now. We will be including `changeset` in the future to manage releases of the packages in the monorepo.
+This repository requires manual releases of the packages for now. We will be including `changesets` (or similar) in the future to manage packages releases in the monorepo.
 
 ## Disclaimer
 
