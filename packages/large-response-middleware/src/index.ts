@@ -68,11 +68,9 @@ export const withLargeResponseHandler = ({
         const clientCanHandleLargeResponseBadRequest = Object.entries(requestHeaders).find(
           ([header, v]) => header.toLowerCase() === HANDLE_LARGE_RESPONSE_HEADER && yn(v),
         );
-        console.log('clientCanHandleLargeResponseBadRequest', clientCanHandleLargeResponseBadRequest);
         let $payload_ref = null;
 
         if (contentLengthMB > thresholdWarnInMB && !clientCanHandleLargeResponseBadRequest) {
-          console.log('uploading to s3');
           const { url } = await safeUploadLargeResponse({
             groupId: String(groupId),
             contentType: 'application/json',
