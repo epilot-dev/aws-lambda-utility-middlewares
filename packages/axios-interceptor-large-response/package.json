@@ -1,0 +1,45 @@
+{
+  "name": "@epilot/axios-interceptor-large-response",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.mjs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
+  },
+  "description": "Axios plugin to intercept large responses",
+  "keywords": ["large-response-middleware", "interceptor", "axios", "large-response", "plugin"],
+  "author": "Alexandre Marques",
+  "contributors": ["Alexandre Marques(https://github.com/alexmarqs)"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest",
+    "lint": "biome check --write .",
+    "prepublishOnly": "pnpm lint && pnpm build",
+    "typecheck": "tsc --noEmit",
+    "local:publish": "yalc publish"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "module": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist/**"],
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "3.0.5",
+    "axios": "^1.6.2",
+    "tsup": "6.7.0"
+  },
+  "peerDependencies": {
+    "axios": ">=0.25.0"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}
