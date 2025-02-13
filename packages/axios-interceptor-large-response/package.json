@@ -11,7 +11,6 @@
   },
   "description": "Axios plugin to intercept large responses",
   "keywords": ["large-response-middleware", "interceptor", "axios", "large-response", "plugin"],
-  "author": "Alexandre Marques",
   "contributors": ["Alexandre Marques(https://github.com/alexmarqs)"],
   "scripts": {
     "build": "tsup",
@@ -29,7 +28,7 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist/**"],
+  "files": ["dist/**", "README.md"],
   "devDependencies": {
     "typescript": "^5.3.3",
     "vitest": "3.0.5",

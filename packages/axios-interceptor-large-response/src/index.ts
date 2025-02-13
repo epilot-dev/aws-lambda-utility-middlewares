@@ -1,1 +1,2 @@
-export { axiosInterceptor } from './lib/axios-interceptor';
+export { axiosInterceptorLargeResponse } from './interceptor/axios-interceptor';
+export * from './types';
