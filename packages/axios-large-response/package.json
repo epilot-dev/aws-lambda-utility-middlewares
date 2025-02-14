@@ -1,5 +1,5 @@
 {
-  "name": "@epilot/axios-interceptor-large-response",
+  "name": "@epilot/axios-large-response",
   "version": "0.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -7,7 +7,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main"
+    "url": "git+https://github.com/epilot-dev/aws-lambda-utility-middlewares.git#main",
+    "directory": "packages/axios-large-response"
   },
   "description": "Axios plugin to intercept large responses",
   "keywords": ["large-response-middleware", "interceptor", "axios", "large-response", "plugin"],
