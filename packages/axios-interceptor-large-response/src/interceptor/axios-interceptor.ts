@@ -1,16 +1,16 @@
-import type {
-  AxiosInterceptorLargeResponse,
-  AxiosInterceptorLargeResponseOptions,
-  LargePayloadResponse,
-} from '../types';
-import { NAMESPACE, fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled } from '../utils/utils';
+import type { AxiosLargeResponse, AxiosLargeResponseOptions, LargePayloadResponse } from '../types';
+import { NAMESPACE, getOptions, isDebugEnabled } from '../utils/utils';
 
 /**
  * This is the main function that adds the interceptors to the axios instance.
  */
-const axiosInterceptorLargeResponse: AxiosInterceptorLargeResponse = (axiosInstance, globalOptions) => {
+const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) => {
   const requestInterceptorId = axiosInstance.interceptors.request.use((config) => {
-    const { headerFlag } = getOptions(config?.[NAMESPACE], globalOptions);
+    const { headerFlag, enabled } = getOptions(config?.[NAMESPACE], globalOptions);
+
+    if (!enabled) {
+      return config;
+    }
 
     config.headers = config.headers || {};
     config.headers.Accept = headerFlag;
@@ -20,20 +20,27 @@ const axiosInterceptorLargeResponse: AxiosInterceptorLargeResponse = (axiosInsta
 
   const responseInterceptorId = axiosInstance.interceptors.response.use(async (response) => {
     const configRequestOptions = response?.config?.[NAMESPACE];
-    const { debug, logger, headerFlag, refUrlProperty } = getOptions(configRequestOptions, globalOptions);
+    const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled } = getOptions(
+      configRequestOptions,
+      globalOptions,
+    );
+
+    if (!enabled) {
+      return response;
+    }
 
     if (
       response.headers['content-type'] === headerFlag &&
       response.data &&
-      (response.data as LargePayloadResponse)[refUrlProperty]
+      (response.data as LargePayloadResponse)[refProperty]
     ) {
       if (isDebugEnabled(debug)) {
         logger.debug('[LargeResponseInterceptor] Fetching large payload from ref url', {
-          refUrl: (response.data as LargePayloadResponse)[refUrlProperty],
+          ref: (response.data as LargePayloadResponse)[refProperty],
         });
       }
       try {
-        response.data = await fetchLargePayloadFromS3Ref((response.data as LargePayloadResponse)[refUrlProperty]);
+        response.data = await onFetchLargePayloadFromRef((response.data as LargePayloadResponse)[refProperty]);
       } catch (error) {
         logger.error('[LargeResponseInterceptor] Error fetching large payload from ref url', {
           reason: error instanceof Error ? error.message : 'unknown',
@@ -56,8 +63,8 @@ const axiosInterceptorLargeResponse: AxiosInterceptorLargeResponse = (axiosInsta
  */
 declare module 'axios' {
   export interface AxiosRequestConfig {
-    [NAMESPACE]?: AxiosInterceptorLargeResponseOptions;
+    [NAMESPACE]?: AxiosLargeResponseOptions;
   }
 }
 
-export { axiosInterceptorLargeResponse };
+export { axiosLargeResponse };

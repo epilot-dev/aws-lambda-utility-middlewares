@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AxiosInterceptorLargeResponseOptions } from '../types';
+import type { AxiosLargeResponseOptions } from '../types';
 
 const DEBUG_ENV_VAR = 'AXIOS_INTERCEPTOR_LARGE_RESPONSE_DEBUG';
 
@@ -18,11 +18,13 @@ const isDebugEnabled = (manualDebug?: boolean) => {
   return envVarValue === 'true' || envVarValue === '1';
 };
 
-const DEFAULT_OPTIONS: Required<AxiosInterceptorLargeResponseOptions> = {
+export const DEFAULT_OPTIONS: Required<AxiosLargeResponseOptions> = {
+  enabled: true,
   debug: false,
   logger: console,
   headerFlag: LARGE_PAYLOAD_MIME_TYPE,
-  refUrlProperty: '$payload_ref',
+  refProperty: '$payload_ref',
+  onFetchLargePayloadFromRef: fetchLargePayloadFromS3Ref,
 };
 
 /**
@@ -30,17 +32,14 @@ const DEFAULT_OPTIONS: Required<AxiosInterceptorLargeResponseOptions> = {
  * If the config request options are not provided, it will use the global options.
  * If the config request options are provided, it will use the config request options.
  */
-const getOptions = (
-  configRequestOptions?: AxiosInterceptorLargeResponseOptions,
-  globalOptions?: AxiosInterceptorLargeResponseOptions,
-) => {
+const getOptions = (configRequestOptions?: AxiosLargeResponseOptions, globalOptions?: AxiosLargeResponseOptions) => {
   return {
     ...DEFAULT_OPTIONS,
     ...globalOptions,
     ...configRequestOptions,
-  };
+  } satisfies AxiosLargeResponseOptions;
 };
 
-const NAMESPACE = 'axios-interceptor-large-response';
+const NAMESPACE = 'largeResponse';
 
 export { fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled, LARGE_PAYLOAD_MIME_TYPE, NAMESPACE };

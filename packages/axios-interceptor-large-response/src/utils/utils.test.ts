@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchLargePayloadFromS3Ref, isDebugEnabled } from './utils';
+import type { AxiosLargeResponseOptions } from '../types';
+import { DEFAULT_OPTIONS, fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled } from './utils';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
@@ -43,5 +44,42 @@ describe('fetchLargePayloadFromS3Ref', () => {
     const largePayload = await fetchLargePayloadFromS3Ref('https://example.com/large-payload');
 
     expect(largePayload).toEqual({ payload: 'large-payload' });
+  });
+});
+
+describe('getOptions', () => {
+  it('should merge the global options with the config request options', () => {
+    const globalOptions = {
+      enabled: true,
+      debug: false,
+      logger: console,
+      headerFlag: 'application/json',
+      refProperty: '$payload_ref',
+      onFetchLargePayloadFromRef: fetchLargePayloadFromS3Ref,
+    } satisfies AxiosLargeResponseOptions;
+
+    const customOnFetchLargePayloadFromRef = async (ref: string) => {
+      return { payload: `large-payload-from-${ref}` };
+    };
+
+    const configRequestOptions = {
+      enabled: false,
+      onFetchLargePayloadFromRef: customOnFetchLargePayloadFromRef,
+    } satisfies AxiosLargeResponseOptions;
+
+    const options = getOptions(configRequestOptions, globalOptions);
+    expect(options).toEqual({
+      enabled: false,
+      debug: false,
+      logger: console,
+      headerFlag: 'application/json',
+      refProperty: '$payload_ref',
+      onFetchLargePayloadFromRef: customOnFetchLargePayloadFromRef,
+    });
+  });
+
+  it('should use the default options', () => {
+    const options = getOptions();
+    expect(options).toEqual(DEFAULT_OPTIONS);
   });
 });

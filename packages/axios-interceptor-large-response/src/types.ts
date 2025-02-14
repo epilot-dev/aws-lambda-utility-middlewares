@@ -9,19 +9,21 @@ type Logger = {
   error: (message: string, ...args: unknown[]) => void;
 };
 
-type AxiosInterceptorLargeResponseOptions = {
+type AxiosLargeResponseOptions = {
+  enabled?: boolean;
   debug?: boolean;
   logger?: Logger;
   headerFlag?: string;
-  refUrlProperty?: string;
+  refProperty?: string;
+  onFetchLargePayloadFromRef?: (ref: string) => Promise<unknown>;
 };
 
-type AxiosInterceptorLargeResponse = (
+type AxiosLargeResponse = (
   axiosInstance: AxiosInstance | AxiosStatic,
-  axiosInterceptorLargeResponseOptions?: AxiosInterceptorLargeResponseOptions,
+  axiosLargeResponseOptions?: AxiosLargeResponseOptions,
 ) => {
   requestInterceptorId: number;
   responseInterceptorId: number;
 };
 
-export type { AxiosInterceptorLargeResponse, AxiosInterceptorLargeResponseOptions, LargePayloadResponse, Logger };
+export type { AxiosLargeResponse, AxiosLargeResponseOptions, LargePayloadResponse, Logger };
