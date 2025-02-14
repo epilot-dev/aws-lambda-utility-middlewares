@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     include: ['**/*.{test,spec}.ts?(x)'],
     exclude: ['**/node_modules/**'],
-    silent: false,
+    silent: true,
     watch: false,
     poolOptions: {
       threads: {
