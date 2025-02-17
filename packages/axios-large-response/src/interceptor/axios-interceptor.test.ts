@@ -1,13 +1,20 @@
 import axios, { type AxiosInstance } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AxiosLargeResponseOptions } from '../types';
-import { LARGE_PAYLOAD_MIME_TYPE } from '../utils/utils';
+import { LARGE_PAYLOAD_MIME_TYPE, NAMESPACE } from '../utils/utils';
 import { axiosLargeResponse } from './axios-interceptor';
 
+/**
+ * Test suite for the axiosInterceptorLargeResponse interceptor.
+ */
 describe('axiosInterceptorLargeResponse', () => {
   let axiosInstance: AxiosInstance;
   let globalOptions: Required<AxiosLargeResponseOptions>;
 
+  /**
+   * Setup the axios instance and global options.
+   * Before each test.
+   */
   beforeEach(() => {
     axiosInstance = axios.create();
     globalOptions = {
@@ -23,11 +30,15 @@ describe('axiosInterceptorLargeResponse', () => {
     };
   });
 
+  /**
+   * Normal responses should pass through unchanged.
+   */
   it('should allow normal responses to pass through unchanged', async () => {
     // given
     const requestConfig = {
       method: 'GET',
       url: 'https://api.example.com',
+      headers: {},
     };
 
     const normalResponse = {
@@ -57,6 +68,10 @@ describe('axiosInterceptorLargeResponse', () => {
     expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
   });
 
+  /**
+   * Large responses should be fetched from the ref url and returned with the large payload.
+   * Using global options.
+   */
   it('should handle large responses appropriately using global options', async () => {
     // given
     const largePayloadUrl = 'https://api.example.com/large-payload';
@@ -66,6 +81,7 @@ describe('axiosInterceptorLargeResponse', () => {
     const requestConfig = {
       method: 'GET',
       url: 'https://api.example.com',
+      headers: {},
     };
 
     const largeResponse = {
@@ -77,10 +93,11 @@ describe('axiosInterceptorLargeResponse', () => {
       },
       status: 200,
       statusText: 'OK',
+      config: requestConfig,
     };
 
     // when
-    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance);
 
     const { requestInterceptor, responseInterceptor } = getInterceptors(
       axiosInstance,
@@ -100,7 +117,12 @@ describe('axiosInterceptorLargeResponse', () => {
       data: { huge: 'data' },
     });
   });
-  it('should handle large responses appropriately using custom global options', async () => {
+
+  /**
+   * Large responses should be fetched from the ref url and returned with the large payload.
+   * Using more custom global options.
+   */
+  it('should handle large responses appropriately using more custom global options', async () => {
     // given
     const largePayloadUrl = 'https://api.example.com/large-payload';
     const refProperty = '$customRef';
@@ -109,6 +131,7 @@ describe('axiosInterceptorLargeResponse', () => {
     const requestConfig = {
       method: 'GET',
       url: 'https://api.example.com',
+      headers: {},
     };
 
     const largeResponse = {
@@ -118,6 +141,7 @@ describe('axiosInterceptorLargeResponse', () => {
       headers: {
         'content-type': headerFlag,
       },
+      config: requestConfig,
     };
 
     const customGlobalOptions = {
@@ -162,10 +186,158 @@ describe('axiosInterceptorLargeResponse', () => {
       },
     });
   });
+
+  /**
+   * Large responses should be fetched from the ref url and returned with the large payload.
+   * Using per-request options.
+   */
   it('should handle large responses appropriately using per-request options', async () => {
     // given
+    const largePayloadUrl = 'https://api.example.com/large-payload';
+    const refProperty = '$customRef';
+    const headerFlag = 'application/custom-large-response.vnd+json';
+
+    const customGlobalOptions = {
+      ...globalOptions,
+      enabled: false,
+    };
+
+    const requestConfigEnabled = {
+      method: 'GET',
+      url: 'https://api.example.com',
+      [NAMESPACE]: {
+        enabled: true,
+        headerFlag,
+        refProperty,
+        debug: true,
+        onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({
+          superBigData: {
+            foo: 'bar',
+          },
+        }),
+      },
+    };
+
+    const requestConfigDisabled = {
+      method: 'GET',
+      url: 'https://api.example.com',
+      headers: {},
+    };
+
+    const largeResponseDisabled = {
+      data: {
+        foo: 'bar',
+      },
+      headers: {
+        'content-type': 'application/json',
+      },
+      config: requestConfigDisabled,
+    };
+
+    const largeResponseEnabled = {
+      headers: {
+        'content-type': headerFlag,
+      },
+      data: {
+        [refProperty]: largePayloadUrl,
+      },
+      config: requestConfigEnabled,
+    };
+
     // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, customGlobalOptions);
+
+    const { requestInterceptor, responseInterceptor } = getInterceptors(
+      axiosInstance,
+      requestInterceptorId,
+      responseInterceptorId,
+    );
+
+    const modifiedRequestEnabled = await requestInterceptor(requestConfigEnabled);
+    const modifiedRequestDisabled = await requestInterceptor(requestConfigDisabled);
+    const resultDisabled = await responseInterceptor(largeResponseDisabled);
+    const resultEnabled = await responseInterceptor(largeResponseEnabled);
+
     // then
+    expect(modifiedRequestDisabled.headers.Accept).not.toEqual(headerFlag);
+    expect(modifiedRequestDisabled.headers.Accept).not.toEqual(globalOptions.headerFlag);
+    expect(resultDisabled).toEqual(largeResponseDisabled);
+    expect(modifiedRequestEnabled.headers.Accept).toEqual(headerFlag);
+    expect(resultEnabled).toEqual({
+      ...largeResponseEnabled,
+      data: {
+        superBigData: {
+          foo: 'bar',
+        },
+      },
+    });
+    expect(requestConfigEnabled[NAMESPACE].onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
+  });
+
+  /**
+   * Large responses should be fetched from the ref url and returned with the large payload.
+   * Using merge of per-request and global options.
+   */
+  it('should handle large responses appropriately using correct merge of per-request and global options', async () => {
+    // given
+    const largePayloadUrl = 'https://api.example.com/large-payload';
+
+    const customGlobalOptions = {
+      ...globalOptions,
+      refProperty: '$globalRef',
+      debug: true,
+    };
+
+    const requestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com',
+      [NAMESPACE]: {
+        headerFlag: 'application/request-large-response.vnd+json',
+        debug: false,
+        onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({
+          superBigData: {
+            foo: 'bar',
+          },
+        }),
+      },
+    };
+
+    const largeResponse = {
+      data: {
+        [customGlobalOptions.refProperty]: largePayloadUrl,
+      },
+      headers: {
+        'content-type': requestConfig[NAMESPACE].headerFlag,
+      },
+      config: requestConfig,
+    };
+
+    // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, customGlobalOptions);
+
+    const { requestInterceptor, responseInterceptor } = getInterceptors(
+      axiosInstance,
+      requestInterceptorId,
+      responseInterceptorId,
+    );
+
+    const modifiedRequest = await requestInterceptor(requestConfig);
+    const result = await responseInterceptor(largeResponse);
+
+    // then
+    expect(modifiedRequest.headers.Accept).toEqual(requestConfig[NAMESPACE].headerFlag);
+    expect(customGlobalOptions.logger.debug).not.toHaveBeenCalled();
+    expect(globalOptions.logger.debug).not.toHaveBeenCalled();
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+    expect(requestConfig[NAMESPACE].onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
+    expect(result).toEqual({
+      ...largeResponse,
+      data: {
+        superBigData: {
+          foo: 'bar',
+        },
+      },
+    });
   });
 });
 
