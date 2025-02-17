@@ -35,14 +35,14 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
       (response.data as LargePayloadResponse)[refProperty]
     ) {
       if (isDebugEnabled(debug)) {
-        logger.debug('[LargeResponseInterceptor] Fetching large payload from ref url', {
+        logger.debug('[axios-large-response] Fetching large payload from ref url', {
           ref: (response.data as LargePayloadResponse)[refProperty],
         });
       }
       try {
         response.data = await onFetchLargePayloadFromRef((response.data as LargePayloadResponse)[refProperty]);
       } catch (error) {
-        logger.error('[LargeResponseInterceptor] Error fetching large payload from ref url', {
+        logger.error('[axios-large-response] Error fetching large payload from ref url', {
           reason: error instanceof Error ? error.message : 'unknown',
         });
         throw error;

@@ -1,37 +1,35 @@
 import axios, { type AxiosInstance } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AxiosLargeResponseOptions } from '../types';
+import { LARGE_PAYLOAD_MIME_TYPE } from '../utils/utils';
 import { axiosLargeResponse } from './axios-interceptor';
 
 describe('axiosInterceptorLargeResponse', () => {
   let axiosInstance: AxiosInstance;
-  let globalOptions: AxiosLargeResponseOptions;
+  let globalOptions: Required<AxiosLargeResponseOptions>;
 
   beforeEach(() => {
     axiosInstance = axios.create();
     globalOptions = {
       enabled: true,
-      headerFlag: 'application/ref+json',
-      refProperty: 'ref',
+      headerFlag: LARGE_PAYLOAD_MIME_TYPE,
+      refProperty: '$payloadRef',
       debug: false,
       logger: {
         debug: vi.fn(),
         error: vi.fn(),
       },
-      onFetchLargePayloadFromRef: vi.fn(),
+      onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({ huge: 'data' }),
     };
   });
 
-  // biome-ignore lint/suspicious/noFocusedTests: <explanation>
-  it.only('should allow normal responses to pass through unchanged', async () => {
-    // Mock request config
+  it('should allow normal responses to pass through unchanged', async () => {
+    // given
     const requestConfig = {
-      headers: {},
       method: 'GET',
       url: 'https://api.example.com',
     };
 
-    // Mock response
     const normalResponse = {
       data: { foo: 'bar' },
       headers: { 'content-type': 'application/json' },
@@ -40,6 +38,7 @@ describe('axiosInterceptorLargeResponse', () => {
       statusText: 'OK',
     };
 
+    // when
     const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
 
     const { requestInterceptor, responseInterceptor } = getInterceptors(
@@ -48,107 +47,125 @@ describe('axiosInterceptorLargeResponse', () => {
       responseInterceptorId,
     );
 
-    const modifiedConfig = await requestInterceptor(requestConfig);
-    expect(modifiedConfig.headers.Accept).toBe(globalOptions.headerFlag);
-
+    const modifiedRequest = await requestInterceptor(requestConfig);
     const result = await responseInterceptor(normalResponse);
-    expect(result).toEqual(normalResponse);
 
+    // then
+    expect(globalOptions.logger.debug).not.toHaveBeenCalled();
+    expect(modifiedRequest).toEqual(requestConfig);
+    expect(result).toEqual(normalResponse);
     expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
   });
 
-  // it('should handle large responses appropriately', async () => {
-  //   const { responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
-  //   const largePayloadUrl = 'https://api.example.com/large-payload';
-  //   const largePayloadData = { huge: 'data' };
+  it('should handle large responses appropriately using global options', async () => {
+    // given
+    const largePayloadUrl = 'https://api.example.com/large-payload';
+    const refProperty = globalOptions.refProperty;
+    const headerFlag = globalOptions.headerFlag;
 
-  //   const largeResponse = {
-  //     data: { ref: largePayloadUrl } as LargePayloadResponse,
-  //     headers: { 'content-type': 'application/ref+json' },
-  //     config: {},
-  //   };
+    const requestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com',
+    };
 
-  //   globalOptions.onFetchLargePayloadFromRef.mockResolvedValueOnce(largePayloadData);
+    const largeResponse = {
+      data: {
+        [refProperty]: largePayloadUrl,
+      },
+      headers: {
+        'content-type': headerFlag,
+      },
+      status: 200,
+      statusText: 'OK',
+    };
 
-  //   const interceptor = axiosInstance.interceptors.response.handlers[responseInterceptorId].fulfilled;
-  //   const result = await interceptor(largeResponse);
+    // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
 
-  //   expect(result.data).toEqual(largePayloadData);
-  //   expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
-  // });
+    const { requestInterceptor, responseInterceptor } = getInterceptors(
+      axiosInstance,
+      requestInterceptorId,
+      responseInterceptorId,
+    );
 
-  // it('should respect the configured size threshold when disabled', async () => {
-  //   const localOptions: AxiosLargeResponseOptions = {
-  //     ...globalOptions,
-  //     enabled: false,
-  //   };
+    const modifiedRequest = await requestInterceptor(requestConfig);
+    const result = await responseInterceptor(largeResponse);
 
-  //   const { responseInterceptorId } = axiosLargeResponse(axiosInstance, localOptions);
-  //   const largeResponse = {
-  //     data: { ref: 'some-url' } as LargePayloadResponse,
-  //     headers: { 'content-type': 'application/ref+json' },
-  //     config: {},
-  //   };
+    // then
+    expect(modifiedRequest).toEqual(requestConfig);
+    expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
+    expect(result).toEqual({
+      ...largeResponse,
+      data: { huge: 'data' },
+    });
+  });
+  it('should handle large responses appropriately using custom global options', async () => {
+    // given
+    const largePayloadUrl = 'https://api.example.com/large-payload';
+    const refProperty = '$customRef';
+    const headerFlag = 'application/custom-large-response.vnd+json';
 
-  //   const interceptor = axiosInstance.interceptors.response.handlers[responseInterceptorId].fulfilled;
-  //   const result = await interceptor(largeResponse);
+    const requestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com',
+    };
 
-  //   expect(result).toEqual(largeResponse);
-  //   expect(localOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
-  // });
+    const largeResponse = {
+      data: {
+        [refProperty]: largePayloadUrl,
+      },
+      headers: {
+        'content-type': headerFlag,
+      },
+    };
 
-  // it('should handle errors gracefully', async () => {
-  //   const { responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
-  //   const error = new Error('Failed to fetch');
-  //   const largeResponse = {
-  //     data: { ref: 'error-url' } as LargePayloadResponse,
-  //     headers: { 'content-type': 'application/ref+json' },
-  //     config: {},
-  //   };
+    const customGlobalOptions = {
+      ...globalOptions,
+      headerFlag,
+      refProperty,
+      debug: true,
+      onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({
+        superBigData: {
+          foo: 'bar',
+        },
+      }),
+    };
 
-  //   globalOptions.onFetchLargePayloadFromRef.mockRejectedValueOnce(error);
+    // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, customGlobalOptions);
 
-  //   const interceptor = axiosInstance.interceptors.response.handlers[responseInterceptorId].fulfilled;
+    const { requestInterceptor, responseInterceptor } = getInterceptors(
+      axiosInstance,
+      requestInterceptorId,
+      responseInterceptorId,
+    );
 
-  //   await expect(interceptor(largeResponse)).rejects.toThrow('Failed to fetch');
-  //   expect(globalOptions.logger.error).toHaveBeenCalledWith(
-  //     '[LargeResponseInterceptor] Error fetching large payload from ref url',
-  //     { reason: 'Failed to fetch' },
-  //   );
-  // });
+    const modifiedRequest = await requestInterceptor(requestConfig);
+    const result = await responseInterceptor(largeResponse);
 
-  // it('should set correct request headers', async () => {
-  //   const { requestInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
-  //   const config = {
-  //     headers: {},
-  //   };
-
-  //   const interceptor = axiosInstance.interceptors.request.handlers[requestInterceptorId].fulfilled;
-  //   const result = await interceptor(config);
-
-  //   expect(result.headers.Accept).toBe(globalOptions.headerFlag);
-  // });
-
-  // it('should respect per-request options', async () => {
-  //   const { responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
-  //   const customRefProperty = 'customRef';
-  //   const largePayloadUrl = 'https://api.example.com/large-payload';
-
-  //   const largeResponse = {
-  //     data: { [customRefProperty]: largePayloadUrl },
-  //     headers: { 'content-type': 'application/ref+json' },
-  //     config: {
-  //       [NAMESPACE]: {
-  //         refProperty: customRefProperty,
-  //       },
-  //     },
-  //   };
-
-  //   const interceptor = axiosInstance.interceptors.response.handlers[responseInterceptorId].fulfilled;
-  //   await interceptor(largeResponse);
-
-  //   expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
-  // });
+    // then
+    expect(modifiedRequest).toEqual(requestConfig);
+    expect(customGlobalOptions.logger.debug).toHaveBeenCalledWith(
+      '[axios-large-response] Fetching large payload from ref url',
+      {
+        ref: largePayloadUrl,
+      },
+    );
+    expect(customGlobalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
+    expect(result).toEqual({
+      ...largeResponse,
+      data: {
+        superBigData: {
+          foo: 'bar',
+        },
+      },
+    });
+  });
+  it('should handle large responses appropriately using per-request options', async () => {
+    // given
+    // when
+    // then
+  });
 });
 
 const getInterceptors = (axiosInstance: AxiosInstance, requestId: number, responseId: number) => {
