@@ -97,7 +97,7 @@ describe('axiosInterceptorLargeResponse', () => {
     };
 
     // when
-    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance);
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(axiosInstance, globalOptions);
 
     const { requestInterceptor, responseInterceptor } = getInterceptors(
       axiosInstance,

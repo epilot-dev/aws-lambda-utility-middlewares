@@ -40,6 +40,6 @@ const getOptions = (configRequestOptions?: AxiosLargeResponseOptions, globalOpti
   } satisfies AxiosLargeResponseOptions;
 };
 
-const NAMESPACE = 'largeResponse';
+const NAMESPACE = 'axios-large-response';
 
 export { fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled, LARGE_PAYLOAD_MIME_TYPE, NAMESPACE };
