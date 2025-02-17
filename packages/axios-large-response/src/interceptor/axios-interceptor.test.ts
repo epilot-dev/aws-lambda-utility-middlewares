@@ -52,7 +52,7 @@ describe('axiosInterceptorLargeResponse', () => {
 
     // then
     expect(globalOptions.logger.debug).not.toHaveBeenCalled();
-    expect(modifiedRequest).toEqual(requestConfig);
+    expect(modifiedRequest.headers.Accept).toEqual(globalOptions.headerFlag);
     expect(result).toEqual(normalResponse);
     expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
   });
@@ -89,10 +89,11 @@ describe('axiosInterceptorLargeResponse', () => {
     );
 
     const modifiedRequest = await requestInterceptor(requestConfig);
+
     const result = await responseInterceptor(largeResponse);
 
     // then
-    expect(modifiedRequest).toEqual(requestConfig);
+    expect(modifiedRequest.headers.Accept).toEqual(headerFlag);
     expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith(largePayloadUrl);
     expect(result).toEqual({
       ...largeResponse,
@@ -144,7 +145,7 @@ describe('axiosInterceptorLargeResponse', () => {
     const result = await responseInterceptor(largeResponse);
 
     // then
-    expect(modifiedRequest).toEqual(requestConfig);
+    expect(modifiedRequest.headers.Accept).toEqual(headerFlag);
     expect(customGlobalOptions.logger.debug).toHaveBeenCalledWith(
       '[axios-large-response] Fetching large payload from ref url',
       {
