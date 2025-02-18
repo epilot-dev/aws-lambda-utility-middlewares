@@ -25,6 +25,7 @@ export const DEFAULT_OPTIONS: Required<AxiosLargeResponseOptions> = {
   headerFlag: LARGE_PAYLOAD_MIME_TYPE,
   refProperty: '$payload_ref',
   onFetchLargePayloadFromRef: fetchLargePayloadFromS3Ref,
+  errorPayload: undefined,
 };
 
 /**

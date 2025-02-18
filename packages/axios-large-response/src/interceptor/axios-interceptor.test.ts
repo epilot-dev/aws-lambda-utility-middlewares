@@ -27,6 +27,7 @@ describe('axiosLargeResponse', () => {
         error: vi.fn(),
       },
       onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({ huge: 'data' }),
+      errorPayload: undefined,
     };
   });
 
@@ -116,6 +117,101 @@ describe('axiosLargeResponse', () => {
       ...largeResponse,
       data: { huge: 'data' },
     });
+  });
+
+  /**
+   * Large responses errors should be handled appropriately using global options with error payload.
+   */
+  it('should handle large responses errors appropriately using global options with error payload', async () => {
+    // given
+    const largePayloadUrl = 'https://api.example.com/large-payload';
+    const refProperty = globalOptions.refProperty;
+    const headerFlag = globalOptions.headerFlag;
+
+    const requestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com',
+      headers: {},
+    };
+
+    const largeResponse = {
+      data: {
+        [refProperty]: largePayloadUrl,
+      },
+      headers: { 'content-type': headerFlag },
+      status: 200,
+      statusText: 'OK',
+      config: requestConfig,
+    };
+
+    const globalOptionsWithErrorPayload = {
+      ...globalOptions,
+      errorPayload: { data: [], hits: 0 },
+      onFetchLargePayloadFromRef: vi.fn().mockRejectedValue(new Error('Forced error to test error payload')),
+    };
+
+    // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(
+      axiosInstance,
+      globalOptionsWithErrorPayload,
+    );
+
+    const { requestInterceptor, responseInterceptor } = getInterceptors(
+      axiosInstance,
+      requestInterceptorId,
+      responseInterceptorId,
+    );
+
+    const modifiedRequest = await requestInterceptor(requestConfig);
+    const result = await responseInterceptor(largeResponse);
+
+    // then
+    expect(modifiedRequest.headers.Accept).toEqual(headerFlag);
+    expect(result).toEqual({ ...largeResponse, data: { data: [], hits: 0 } });
+    expect(globalOptionsWithErrorPayload.logger.error).toHaveBeenCalledWith(
+      '[axios-large-response] Error fetching large payload from ref url',
+      {
+        reason: 'Forced error to test error payload',
+      },
+    );
+  });
+
+  /**
+   * Should throw error if no error payload is provided.
+   */
+  it('Should throw error if no error payload is provided', async () => {
+    // given
+    const globalOptionsWithoutErrorPayload = {
+      ...globalOptions,
+      errorPayload: undefined,
+      onFetchLargePayloadFromRef: vi.fn().mockRejectedValue(new Error('Forced error to test error propagation')),
+    };
+
+    const largeResponse = {
+      data: {
+        [globalOptionsWithoutErrorPayload.refProperty]: 'https://api.example.com/large-payload',
+      },
+      headers: { 'content-type': globalOptionsWithoutErrorPayload.headerFlag },
+      status: 200,
+      statusText: 'OK',
+    };
+    // when
+    const { requestInterceptorId, responseInterceptorId } = axiosLargeResponse(
+      axiosInstance,
+      globalOptionsWithoutErrorPayload,
+    );
+
+    const { responseInterceptor } = getInterceptors(axiosInstance, requestInterceptorId, responseInterceptorId);
+
+    // then
+    await expect(responseInterceptor(largeResponse)).rejects.toThrow('Forced error to test error propagation');
+
+    expect(globalOptionsWithoutErrorPayload.logger.error).toHaveBeenCalledWith(
+      '[axios-large-response] Error fetching large payload from ref url',
+      {
+        reason: 'Forced error to test error propagation',
+      },
+    );
   });
 
   /**

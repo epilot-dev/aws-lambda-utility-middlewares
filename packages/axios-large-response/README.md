@@ -58,6 +58,7 @@ const response = await axiosInstance.get('https://api.example.com/data', {
 | debug | Boolean | false | Enable debug logging |
 | logger | Object | console | Logger object with debug() and error() methods |
 | onFetchLargePayloadFromRef | Function | Fetches the reference URL and returns the full payload | Callback function to fetch the full payload from the reference URL |
+| errorPayload | Unknown/Any | undefined | Error payload to return if the reference URL is not found or something goes wrong - this will be returned in the response data instead of throwing an error |
 
 ## How it works
 

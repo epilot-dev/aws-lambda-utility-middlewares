@@ -16,6 +16,7 @@ type AxiosLargeResponseOptions = {
   headerFlag?: string;
   refProperty?: string;
   onFetchLargePayloadFromRef?: (ref: string) => Promise<unknown>;
+  errorPayload?: unknown;
 };
 
 type AxiosLargeResponse = (

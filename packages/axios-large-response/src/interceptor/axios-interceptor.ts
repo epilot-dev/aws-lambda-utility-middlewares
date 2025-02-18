@@ -20,7 +20,7 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
 
   const responseInterceptorId = axiosInstance.interceptors.response.use(async (response) => {
     const configRequestOptions = response?.config?.[NAMESPACE];
-    const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled } = getOptions(
+    const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled, errorPayload } = getOptions(
       configRequestOptions,
       globalOptions,
     );
@@ -45,6 +45,13 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
         logger.error('[axios-large-response] Error fetching large payload from ref url', {
           reason: error instanceof Error ? error.message : 'unknown',
         });
+
+        if (errorPayload) {
+          response.data = errorPayload;
+
+          return response;
+        }
+
         throw error;
       }
     }
