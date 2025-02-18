@@ -15,7 +15,7 @@ yarn add @epilot/axios-large-response
 ## Usage
 
 ```ts
-import { axiosLargeResponse } from 'axios-large-response';
+import { axiosLargeResponse } from '@epilot/axios-large-response';
 import axios from 'axios';
 
 // Apply globally to an axios instance

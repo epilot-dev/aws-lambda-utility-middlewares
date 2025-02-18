@@ -11,7 +11,7 @@
     "directory": "packages/axios-large-response"
   },
   "description": "Axios plugin to intercept large responses",
-  "keywords": ["large-response-middleware", "interceptor", "axios", "large-response", "plugin"],
+  "keywords": ["axios-large-response", "large-response-middleware", "interceptor", "axios", "large-response", "plugin"],
   "contributors": ["Alexandre Marques(https://github.com/alexmarqs)"],
   "scripts": {
     "build": "tsup",
