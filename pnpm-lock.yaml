@@ -15,7 +15,7 @@ importers:
         specifier: ^5.3.3
         version: 5.3.3
 
-  packages/axios-interceptor-large-response:
+  packages/axios-large-response:
     devDependencies:
       axios:
         specifier: ^1.6.2

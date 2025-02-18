@@ -5,9 +5,9 @@ import { LARGE_PAYLOAD_MIME_TYPE, NAMESPACE } from '../utils/utils';
 import { axiosLargeResponse } from './axios-interceptor';
 
 /**
- * Test suite for the axiosInterceptorLargeResponse interceptor.
+ * Test suite for the axiosLargeResponse interceptor.
  */
-describe('axiosInterceptorLargeResponse', () => {
+describe('axiosLargeResponse', () => {
   let axiosInstance: AxiosInstance;
   let globalOptions: Required<AxiosLargeResponseOptions>;
 

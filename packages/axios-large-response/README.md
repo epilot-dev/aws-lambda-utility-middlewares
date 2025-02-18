@@ -2,7 +2,7 @@
 
 Axios interceptor to handle large responses. By default it assumes that `@epilot/large-response-middleware` is used to handle the large responses in your backend as described in the [large-response-middleware README](https://github.com/epilot-dev/aws-lambda-utility-middlewares/blob/main/packages/large-response-middleware/README.md). However, it also supports custom callback function to fetch the large payload from the reference URL, custom reference property name and custom header. Please check below for more details.
 
-This interceptor supports also per-request options, so you can enable/disable the interceptor for a specific request (the namespace is `axios-large-response` - please check the [Usage](#usage) section for more details). For now, this intercepter is enabled by default, however we can disable it globally and enable it per-request if needed, for example.
+This interceptor supports also per-request options, so you can enable/disable the interceptor for a specific request (the namespace is `axios-large-response` - please check the [Usage](#usage) section for more details). For now, it is enabled by default, however we can do som combinations based on the use cases, for example, we can disable it globally and enable it per-request if needed.
 
 ## Installation
 
