@@ -9,7 +9,9 @@ This repository is designed to host a collection of useful AWS Lambda Utilities 
 
 ## Middlewares
 
-- [Large Response Middleware](./packages/large-response-middleware/): AWS Lambda has a known limitation regarding the payload size of responses, which is currently set at 6MB. This middleware allows a service to log and save large responses to an S3 bucket, enabling developers to investigate the causes of such large responses. Furthermore, this middleware accepts a special header that allows the rewriting of the response with a $ref pointing to the large payload stored in S3, enabling clients to recover gracefully.
+- [Large Response Middleware](./packages/large-response-middleware/): AWS Lambda has a known limitation regarding the payload size of responses, which is currently set at 6MB. This middleware allows a service to log and save large responses to an S3 bucket, enabling developers to investigate the causes of such large responses. Furthermore, this middleware accepts a special header that allows the rewriting of the response with a $ref pointing to the large payload stored in S3, enabling clients to recover gracefully. 
+
+  - If you are using `axios` in the client, feel free to try our interceptor [Axios Large Response](./packages/axios-large-response/) allowing you to intercept large responses and easily fetch them from S3 with minimal effort.
 
 - [Lambda Server-Timing Middleware (ext)](https://github.com/NishuGoel/lambda-server-timing/tree/main/src): Enables Lambdas to return responses with Server-Timing Header allowing to to pass request-specific timings from the backend to the browser. Allows a server to communicate performance metrics about the request-response cycle to the user agent. It also standardizes a JavaScript interface to enable applications to collect, process, and act on these metrics to optimize application delivery.
 
