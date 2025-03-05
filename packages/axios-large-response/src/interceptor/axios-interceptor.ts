@@ -1,10 +1,14 @@
-import type { AxiosLargeResponse, AxiosLargeResponseOptions, LargePayloadResponse } from '../types';
-import { NAMESPACE, getOptions, isDebugEnabled } from '../utils/utils';
+import type { AxiosLargeResponse, AxiosLargeResponseRequestOptions, LargePayloadResponse } from '../types';
+import { NAMESPACE, getOptions, isDebugEnabled, usageWarnings } from '../utils/utils';
 
 /**
  * This is the main function that adds the interceptors to the axios instance.
  */
 const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) => {
+  // check for warnings
+  usageWarnings(globalOptions);
+
+  // request interceptor
   const requestInterceptorId = axiosInstance.interceptors.request.use((config) => {
     const { headerFlag, enabled } = getOptions(config?.[NAMESPACE], globalOptions);
 
@@ -18,6 +22,7 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
     return config;
   });
 
+  // response interceptor
   const responseInterceptorId = axiosInstance.interceptors.response.use(async (response) => {
     const configRequestOptions = response?.config?.[NAMESPACE];
     const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled, errorPayload } = getOptions(
@@ -70,7 +75,7 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
  */
 declare module 'axios' {
   export interface AxiosRequestConfig {
-    [NAMESPACE]?: AxiosLargeResponseOptions;
+    [NAMESPACE]?: AxiosLargeResponseRequestOptions;
   }
 }
 

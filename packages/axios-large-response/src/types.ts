@@ -7,9 +7,16 @@ type LargePayloadResponse = {
 type Logger = {
   debug: (message: string, ...args: unknown[]) => void;
   error: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
 };
 
-type AxiosLargeResponseOptions = {
+type AxiosLargeResponseOptions = BaseAxiosLargeResponseOptions & {
+  disableWarnings?: boolean;
+};
+
+type AxiosLargeResponseRequestOptions = BaseAxiosLargeResponseOptions;
+
+type BaseAxiosLargeResponseOptions = {
   enabled?: boolean;
   debug?: boolean;
   logger?: Logger;
@@ -27,4 +34,10 @@ type AxiosLargeResponse = (
   responseInterceptorId: number;
 };
 
-export type { AxiosLargeResponse, AxiosLargeResponseOptions, LargePayloadResponse, Logger };
+export type {
+  AxiosLargeResponse,
+  AxiosLargeResponseOptions,
+  AxiosLargeResponseRequestOptions,
+  LargePayloadResponse,
+  Logger,
+};

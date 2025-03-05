@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AxiosLargeResponseOptions } from '../types';
-import { DEFAULT_OPTIONS, fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled } from './utils';
+import type { AxiosLargeResponseOptions, AxiosLargeResponseRequestOptions } from '../types';
+import { DEFAULT_OPTIONS, fetchLargePayloadFromS3Ref, getOptions, isDebugEnabled, usageWarnings } from './utils';
 
 vi.mock('axios');
 const mockedAxios = vi.mocked(axios, true);
@@ -65,12 +65,13 @@ describe('getOptions', () => {
     const configRequestOptions = {
       enabled: false,
       onFetchLargePayloadFromRef: customOnFetchLargePayloadFromRef,
-    } satisfies AxiosLargeResponseOptions;
+    } satisfies AxiosLargeResponseRequestOptions;
 
     const options = getOptions(configRequestOptions, globalOptions);
     expect(options).toEqual({
       enabled: false,
       debug: false,
+      disableWarnings: false,
       logger: console,
       headerFlag: 'application/json',
       refProperty: '$payload_ref',
@@ -81,5 +82,23 @@ describe('getOptions', () => {
   it('should use the default options', () => {
     const options = getOptions();
     expect(options).toEqual(DEFAULT_OPTIONS);
+  });
+});
+
+describe('usageWarnings', () => {
+  const consoleSpy = vi.spyOn(console, 'warn');
+
+  beforeEach(() => {
+    consoleSpy.mockClear();
+  });
+
+  it('should not log warnings if the disableWarnings option is true', () => {
+    usageWarnings({ disableWarnings: true });
+    expect(consoleSpy).not.toHaveBeenCalled();
+  });
+
+  it('should log warnings if the disableWarnings option is false', () => {
+    usageWarnings({ disableWarnings: false });
+    expect(consoleSpy).toHaveBeenCalled();
   });
 });

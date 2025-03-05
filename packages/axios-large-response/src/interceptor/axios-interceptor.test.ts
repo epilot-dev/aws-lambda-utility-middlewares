@@ -19,12 +19,14 @@ describe('axiosLargeResponse', () => {
     axiosInstance = axios.create();
     globalOptions = {
       enabled: true,
+      disableWarnings: false,
       headerFlag: LARGE_PAYLOAD_MIME_TYPE,
       refProperty: '$payloadRef',
       debug: false,
       logger: {
         debug: vi.fn(),
         error: vi.fn(),
+        warn: vi.fn(),
       },
       onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({ huge: 'data' }),
       errorPayload: undefined,
@@ -67,6 +69,56 @@ describe('axiosLargeResponse', () => {
     expect(modifiedRequest.headers.Accept).toEqual(globalOptions.headerFlag);
     expect(result).toEqual(normalResponse);
     expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Warnings should be logged if the disableWarnings option is false (default) and enabled is not explicitly set
+   */
+  it('should log warnings if the disableWarnings option is false and enabled is not explicitly set', async () => {
+    // given
+    // when
+    axiosLargeResponse(axiosInstance, {
+      ...globalOptions,
+      enabled: undefined,
+    });
+
+    // then
+    expect(globalOptions.logger.warn).toHaveBeenCalledWith(
+      `[axios-large-response] By default the interceptor is globally disabled (enabled = false). Please make sure you explicitly set the enabled option.
+       To mute warnings, set globally the disableWarnings option to true.`,
+    );
+  });
+
+  /**
+   * Warnings should not be logged if the disableWarnings option is true and enabled is not explicitly set
+   */
+  it('should not log warnings if the disableWarnings option is true and enabled is not explicitly set', async () => {
+    // given
+    const globalOptionsWithDisableWarnings = {
+      ...globalOptions,
+      disableWarnings: true,
+      enabled: undefined,
+    };
+
+    // when
+    axiosLargeResponse(axiosInstance, globalOptionsWithDisableWarnings);
+
+    // then
+    expect(globalOptions.logger.warn).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Warnings should not be logged if enabled is explicitly set
+   */
+  it('should not log warnings if enabled is explicitly set', async () => {
+    // given
+    const globalOptionsWithDisableWarnings = { ...globalOptions, disableWarnings: false, enabled: false };
+
+    // when
+    axiosLargeResponse(axiosInstance, globalOptionsWithDisableWarnings);
+
+    // then
+    expect(globalOptions.logger.warn).not.toHaveBeenCalled();
   });
 
   /**
