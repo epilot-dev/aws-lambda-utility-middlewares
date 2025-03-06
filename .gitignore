@@ -24,6 +24,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 test-report.xml
-**/lib/
+**/large-response-middleware/lib/
+**/dist/
 stats.html
 *.tgz
