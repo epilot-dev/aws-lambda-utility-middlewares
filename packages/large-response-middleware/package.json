@@ -1,6 +1,6 @@
 {
   "name": "@epilot/large-response-middleware",
-  "version": "0.0.15",
+  "version": "1.0.0-rc.1",
   "license": "MIT",
   "repository": {
     "type": "git",
