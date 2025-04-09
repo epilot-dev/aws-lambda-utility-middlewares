@@ -1,19 +1,15 @@
+import { S3Client, type S3ClientConfig } from '@aws-sdk/client-s3';
 import Log from '@dazn/lambda-powertools-logger';
-import { S3 } from 'aws-sdk';
 
 const AWS_ENDPOINT =
   process.env.AWS_ENDPOINT ||
   (process.env.STAGE === 'local' || process.env.NODE_ENV === 'local' ? 'http://host.docker.internal:4566' : undefined);
 
-export const getS3Client = async (options?: S3.Types.ClientConfiguration) => {
+export const getS3Client = async (options?: S3ClientConfig) => {
   try {
-    const client = new S3({
+    const client = new S3Client({
       endpoint: AWS_ENDPOINT,
-      s3ForcePathStyle: Boolean(AWS_ENDPOINT),
-      httpOptions: {
-        timeout: 60_000,
-        ...options?.httpOptions,
-      },
+      forcePathStyle: Boolean(AWS_ENDPOINT),
       ...options,
     });
 
