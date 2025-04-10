@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Log from '@dazn/lambda-powertools-logger';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type * as Lambda from 'aws-lambda';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getOrgIdFromContext } from './__tests__/util';
@@ -191,7 +191,7 @@ describe('withLargeResponseHandler', () => {
     const middleware = withLargeResponseHandler({
       thresholdWarn: 0.5,
       thresholdError: 0.9,
-      customErrorMessage: (event: APIGatewayProxyEventV2) =>
+      customErrorMessage: (event: Lambda.APIGatewayProxyEventV2) =>
         `Custom error message for ${event.requestContext?.requestId}`,
       sizeLimitInMB: 1,
       outputBucket: 'the-bucket-list',
@@ -243,7 +243,7 @@ describe('withLargeResponseHandler', () => {
           headers: {
             Accept: LARGE_RESPONSE_MIME_TYPE,
           },
-        } as Partial<APIGatewayProxyEventV2>,
+        } as Partial<Lambda.APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB
@@ -301,7 +301,7 @@ describe('withLargeResponseHandler', () => {
           headers: {
             'Handle-Large-Response': 'true',
           },
-        } as Partial<APIGatewayProxyEventV2>,
+        } as Partial<Lambda.APIGatewayProxyEventV2>,
         response: {
           headers: {
             random: Buffer.alloc(0.85 * 1024 * 1024, 'a').toString(), // 0.85MB

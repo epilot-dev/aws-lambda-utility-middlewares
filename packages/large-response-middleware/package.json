@@ -1,6 +1,6 @@
 {
   "name": "@epilot/large-response-middleware",
-  "version": "0.0.15",
+  "version": "1.0.0-rc.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +31,11 @@
     "check-size": "size-limit",
     "lint": "biome check --write .",
     "prepublishOnly": "pnpm lint && pnpm build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bump:prerelease": "npm version prerelease --preid rc --no-git-tag-version",
+    "bump:patch": "npm version patch --no-git-tag-version",
+    "bump:minor": "npm version minor --no-git-tag-version",
+    "bump:major": "npm version major --no-git-tag-version"
   },
   "size-limit": [
     {
@@ -40,12 +44,14 @@
     }
   ],
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.782.0",
+    "@aws-sdk/s3-request-presigner": "3.782.0",
     "@babel/cli": "^7.23.4",
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.4",
     "@babel/preset-typescript": "^7.23.3",
     "@dazn/lambda-powertools-logger": "^1.28.1",
-    "@middy/core": "^2.5.7",
+    "@middy/core": "^3.6.2",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-json": "^6.1.0",
@@ -54,8 +60,6 @@
     "@size-limit/file": "^11.0.1",
     "@types/aws-lambda": "^8.10.130",
     "@types/node": "^20.10.5",
-    "aws-lambda": "^1.0.7",
-    "aws-sdk": "^2.816.0",
     "cross-env": "^7.0.3",
     "npm-run-all": "^4.1.5",
     "rollup": "^4.9.1",
@@ -68,10 +72,10 @@
     "vitest": "3.0.5"
   },
   "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.x",
+    "@aws-sdk/s3-request-presigner": "^3.x",
     "@dazn/lambda-powertools-logger": "^1.28.1",
-    "@middy/core": "^2.5.7",
-    "aws-lambda": "^1.0.7",
-    "aws-sdk": "^2.816.0"
+    "@middy/core": ">=2.x"
   },
   "dependencies": {
     "core-js": "^3.34.0",

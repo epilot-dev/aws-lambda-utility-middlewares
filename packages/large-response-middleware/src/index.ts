@@ -1,6 +1,6 @@
 import Log from '@dazn/lambda-powertools-logger';
 import type middy from '@middy/core';
-import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import type * as Lambda from 'aws-lambda';
 import yn from 'yn';
 
 import { uploadFile } from './file-storage-service';
@@ -27,7 +27,7 @@ export type FileUploadContext = {
   fileName: string;
 };
 
-export type CustomErrorMessage = string | ((event: APIGatewayProxyEventV2) => string);
+export type CustomErrorMessage = string | ((event: Lambda.APIGatewayProxyEventV2) => string);
 
 export const withLargeResponseHandler = ({
   thresholdWarn,
@@ -42,13 +42,13 @@ export const withLargeResponseHandler = ({
   sizeLimitInMB: number;
   outputBucket: string;
   customErrorMessage?: CustomErrorMessage;
-  groupRequestsBy?: (event: APIGatewayProxyEventV2) => string;
+  groupRequestsBy?: (event: Lambda.APIGatewayProxyEventV2) => string;
 }) => {
   return {
     after: async (handlerRequestContext: middy.Request) => {
-      const event = handlerRequestContext.event as APIGatewayProxyEventV2;
+      const event = handlerRequestContext.event as Lambda.APIGatewayProxyEventV2;
       const requestHeaders = event?.headers || {};
-      const response = handlerRequestContext.response as APIGatewayProxyStructuredResultV2;
+      const response = handlerRequestContext.response as Lambda.APIGatewayProxyStructuredResultV2;
 
       try {
         const groupId = groupRequestsBy?.(handlerRequestContext.event) || 'all';
@@ -187,7 +187,10 @@ export const safeUploadLargeResponse = async ({
   }
 };
 
-function getCustomErrorMessage(customErrorMessage: CustomErrorMessage | undefined, event: APIGatewayProxyEventV2) {
+function getCustomErrorMessage(
+  customErrorMessage: CustomErrorMessage | undefined,
+  event: Lambda.APIGatewayProxyEventV2,
+) {
   return typeof customErrorMessage === 'function'
     ? customErrorMessage(event)
     : (customErrorMessage ?? LARGE_RESPONSE_USER_INFO);
