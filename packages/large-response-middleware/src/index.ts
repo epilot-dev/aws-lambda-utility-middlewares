@@ -60,7 +60,7 @@ export const withLargeResponseHandler = ({
           : '';
         const payload = (handlerRequestContext?.response?.body ?? '') + responseHeadersString;
 
-        const aproxContentLengthBytes = payload.length * 1.0;
+        const aproxContentLengthBytes = Buffer.byteLength(payload, 'utf8');
         const contentLengthMB = aproxContentLengthBytes > 0 ? aproxContentLengthBytes / TO_MB_FACTOR : 0.0;
         const sizeLimitInMB = (_sizeLimitInMB ?? LIMIT_REQUEST_SIZE_MB) * 1.0;
         const thresholdWarnInMB = (thresholdWarn ?? 0.0) * 1.0 * sizeLimitInMB;
