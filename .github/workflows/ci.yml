@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x]       
+        node-version: [20.x]
     steps:
       - uses: actions/checkout@v4
       
@@ -31,7 +31,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Oxlint
-        run: npx --yes oxlint@latest
+        run: pnpm dlx oxlint@latest
 
       - name: Lint
         run: pnpm lint
