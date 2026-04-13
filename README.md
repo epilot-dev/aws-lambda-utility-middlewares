@@ -1,5 +1,7 @@
 [![CI](https://github.com/epilot-dev/aws-lambda-utility-middlewares/actions/workflows/ci.yml/badge.svg)](https://github.com/epilot-dev/aws-lambda-utility-middlewares/actions/workflows/ci.yml)
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/epilot-dev/aws-lambda-utility-middlewares/blob/main/)
+[![@epilot/axios-large-response downloads](https://img.shields.io/npm/dm/@epilot/axios-large-response.svg?label=%40epilot%2Faxios-large-response)](https://www.npmjs.com/package/@epilot/axios-large-response)
+[![@epilot/large-response-middleware downloads](https://img.shields.io/npm/dm/@epilot/large-response-middleware.svg?label=%40epilot%2Flarge-response-middleware)](https://www.npmjs.com/package/@epilot/large-response-middleware)
 
 ![banner](./static/banner.webp)
 

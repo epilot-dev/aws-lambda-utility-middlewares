@@ -20,6 +20,9 @@
     "node": ">=14"
   },
   "files": ["lib/", "README.md"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rm -rf lib",
     "build:declarations": "tsc -p tsconfig.json",
