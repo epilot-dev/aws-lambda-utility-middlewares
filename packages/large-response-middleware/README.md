@@ -1,5 +1,7 @@
 ## Lambda Large Response Middleware
 
+[![@epilot/large-response-middleware downloads](https://img.shields.io/npm/dm/@epilot/large-response-middleware.svg?label=%40epilot%2Flarge-response-middleware)](https://www.npmjs.com/package/@epilot/large-response-middleware)
+
 Enables Lambdas to return responses larger than 6MB by offloading the content to S3 and returning a reference to the S3 file.
 
 **Limitations**
