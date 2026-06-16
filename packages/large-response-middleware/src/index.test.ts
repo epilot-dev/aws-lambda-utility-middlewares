@@ -73,7 +73,7 @@ describe('withLargeResponseHandler', () => {
     } as any);
 
     expect(mockLogger.warn).toHaveBeenCalledWith(`Large response detected. ${LARGE_RESPONSE_USER_INFO}`, {
-      contentLength: 1572872,
+      contentLength: 1572899,
       event: { requestContext: {} },
       request: {},
       response_size_mb: '1.50',
@@ -111,7 +111,7 @@ describe('withLargeResponseHandler', () => {
     expect(mockLogger.error).toHaveBeenCalledWith(
       `Large response detected (limit exceeded). ${LARGE_RESPONSE_USER_INFO}`,
       {
-        contentLength: 1939873,
+        contentLength: 1939900,
         event: { requestContext: {} },
         request: {},
         response_size_mb: '1.85',
@@ -217,6 +217,55 @@ describe('withLargeResponseHandler', () => {
 
     expect(JSON.parse(requestResponseContext.response?.body)?.message).toBe('Custom error message for request-id-123');
     expect(requestResponseContext?.response?.statusCode).toBe(413);
+  });
+
+  it('should account for JSON-envelope escaping overhead when a body is under the raw-byte threshold but exceeds it once serialized', async () => {
+    const middleware = withLargeResponseHandler({
+      thresholdWarn: 0.5,
+      thresholdError: 0.9,
+      sizeLimitInMB: 1,
+      outputBucket: 'the-bucket-list',
+      groupRequestsBy: getOrgIdFromContext,
+    });
+
+    // 500_000 double-quotes => 500_000 raw bytes (~0.48MB, below both
+    // thresholds), but each '"' is escaped to '\\"' when the body is embedded
+    // in the JSON response envelope, so the serialized payload is ~0.95MB and
+    // exceeds the ERROR threshold. This is the production scenario that caused
+    // RequestEntityTooLarge (413) when only the raw body was measured.
+    const content = '"'.repeat(500_000);
+    const requestResponseContext = {
+      event: {
+        requestContext: {
+          requestId: 'request-id-123',
+          authorizer: { lambda: { organizationId: 'red-redington' } },
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        } as any,
+        headers: {
+          Accept: LARGE_RESPONSE_MIME_TYPE,
+        },
+      } as Partial<Lambda.APIGatewayProxyEventV2>,
+      response: {
+        body: content,
+      },
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    } as any;
+
+    await middleware.after(requestResponseContext);
+
+    expect(uploadFileMock).toHaveBeenCalledWith({
+      bucket: 'the-bucket-list',
+      content,
+      contentType: 'application/json',
+      fileName: 'request-id-123',
+      groupId: 'red-redington',
+    });
+    expect(requestResponseContext.response.headers?.['content-type']).toBe(LARGE_RESPONSE_MIME_TYPE);
+    expect(JSON.parse(requestResponseContext.response.body)).toMatchObject({
+      $payload_ref: expect.stringMatching(
+        /http:\/\/localhost:4566\/the-bucket-list\/red-redington\/\d+-\d+-\d+\/la-caballa/,
+      ),
+    });
   });
 
   describe('when request header "Accept":"application/large-response.vnd+json" is given', () => {
