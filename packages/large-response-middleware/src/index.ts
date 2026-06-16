@@ -53,14 +53,17 @@ export const withLargeResponseHandler = ({
       try {
         const groupId = groupRequestsBy?.(handlerRequestContext.event) || 'all';
         const awsRequestId = handlerRequestContext.event.requestContext?.requestId;
-        const responseHeadersString = response.headers
-          ? Object.entries(response.headers)
-              .map(([h, v]) => `${h}: ${v}`)
-              .join(' ')
-          : '';
-        const payload = (handlerRequestContext?.response?.body ?? '') + responseHeadersString;
 
-        const aproxContentLengthBytes = Buffer.byteLength(payload, 'utf8');
+        // AWS Lambda enforces its payload limit against the *fully serialized*
+        // proxy-response envelope (statusCode + headers + body), measured in
+        // UTF-8 bytes. The body is embedded as a JSON string, so every '"',
+        // '\\' and control char inside it is escaped, and the envelope adds its
+        // own structural overhead. Measuring only the raw body (or body +
+        // header string) under-counts this, which means a response that fits
+        // the threshold here can still exceed the limit once the runtime
+        // serializes it -> RequestEntityTooLarge (413). Measure the serialized
+        // envelope so our estimate matches what the runtime actually checks.
+        const aproxContentLengthBytes = response ? Buffer.byteLength(JSON.stringify(response), 'utf8') : 0;
         const contentLengthMB = aproxContentLengthBytes > 0 ? aproxContentLengthBytes / TO_MB_FACTOR : 0.0;
         const sizeLimitInMB = (_sizeLimitInMB ?? LIMIT_REQUEST_SIZE_MB) * 1.0;
         const thresholdWarnInMB = (thresholdWarn ?? 0.0) * 1.0 * sizeLimitInMB;
