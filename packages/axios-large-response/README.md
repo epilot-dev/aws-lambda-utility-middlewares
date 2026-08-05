@@ -58,15 +58,40 @@ const response =  await axiosInstance.get('https://api.example.com/data', {
 });
 ```
 
+## Clients that don't dispatch through axios (`withLargeResponse`)
+
+Interceptors only run for requests that go through the axios adapter. A client configured with its own runner bypasses that adapter entirely, so the interceptor never sees those requests - and responses over the transport's payload limit fail with a `413`. The most common case is service-to-service calls over an AWS Lambda invoke, wired up with `openapi-client-axios`' `registerRunner`.
+
+`withLargeResponse` wraps such a runner and gives it the same behaviour as the interceptor:
+
+```ts
+import { withLargeResponse } from '@epilot/axios-large-response';
+import { getLambdaRunner } from 'openapi-lambda-adapter';
+
+client.api.registerRunner(
+  withLargeResponse(getLambdaRunner(lambdaName, context), {
+    enabled: true,
+    // ... same options as the interceptor, except per-request ones
+  }),
+);
+```
+
+The runner is described structurally - anything with a `runRequest(request, ...rest)` method qualifies - so this is not tied to AWS Lambda, or to any particular transport. HTTP clients, in-process calls and test doubles all work, and trailing arguments (such as `openapi-client-axios`' `operation` and `context`) are passed through untouched. The package gains no dependency beyond `axios` as a result.
+
+Two differences from the interceptor:
+
+- **`enabled` is resolved once**, when the runner is wrapped, rather than per request - a runner has no per-request options channel. When disabled, the original runner is returned untouched.
+- **Other members of the runner are preserved.** This matters: `openapi-client-axios` invokes a registered runner as `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads the target function name off that `context`. Wrap your runner rather than rebuilding it, and it survives.
+
 ## Options
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | enabled | Boolean | false | Enable/disable the interceptor |
 | headerFlag | String | 'application/large-response.vnd+json' | Content type header indicating a large payload reference response |
-| refProperty | String | '$payloadRef' | Property name containing the reference URL in the response |
+| refProperty | String | '$payload_ref' | Property name containing the reference URL in the response |
 | debug | Boolean | false | Enable debug logging |
-| logger | Object | console | Logger object with debug() and error() methods |
+| logger | Object | console | Logger object with debug(), error() and warn() methods |
 | onFetchLargePayloadFromRef | Function | Fetches the reference URL and returns the full payload | Callback function to fetch the full payload from the reference URL |
 | errorPayload | Unknown/Any | undefined | Error payload to return if the reference URL is not found or something goes wrong - this will be returned in the response data instead of throwing an error |
 | disableWarnings | Boolean | false | Disable warnings, only available globally in the options |
@@ -84,7 +109,7 @@ Example server response for a large payload:
 
 ```json
 {
-  "$payloadRef": "https://api.example.com/large-payloads/123"
+  "$payload_ref": "https://api.example.com/large-payloads/123"
 }
 ```
 

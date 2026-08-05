@@ -1,5 +1,5 @@
-import type { AxiosLargeResponse, AxiosLargeResponseRequestOptions, LargePayloadResponse } from '../types';
-import { NAMESPACE, getOptions, isDebugEnabled, usageWarnings } from '../utils/utils';
+import type { AxiosLargeResponse, AxiosLargeResponseRequestOptions } from '../types';
+import { NAMESPACE, getOptions, isDebugEnabled, resolvePayloadRef, usageWarnings } from '../utils/utils';
 
 /**
  * This is the main function that adds the interceptors to the axios instance.
@@ -34,18 +34,16 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
       return response;
     }
 
-    if (
-      response.headers['content-type'] === headerFlag &&
-      response.data &&
-      (response.data as LargePayloadResponse)[refProperty]
-    ) {
+    const payloadRef = resolvePayloadRef(response, headerFlag, refProperty);
+
+    if (payloadRef) {
       if (isDebugEnabled(debug)) {
         logger.debug('[axios-large-response] Fetching large payload from ref url', {
-          ref: (response.data as LargePayloadResponse)[refProperty],
+          ref: payloadRef,
         });
       }
       try {
-        response.data = await onFetchLargePayloadFromRef((response.data as LargePayloadResponse)[refProperty]);
+        response.data = await onFetchLargePayloadFromRef(payloadRef);
       } catch (error) {
         logger.error('[axios-large-response] Error fetching large payload from ref url', {
           reason: error instanceof Error ? error.message : 'unknown',
