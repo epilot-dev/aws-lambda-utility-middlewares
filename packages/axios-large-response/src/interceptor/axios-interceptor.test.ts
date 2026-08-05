@@ -500,3 +500,112 @@ const getInterceptors = (axiosInstance: AxiosInstance, requestId: number, respon
     responseInterceptor,
   };
 };
+
+/**
+ * The suite above calls the interceptor handlers directly, with hand-built config and
+ * response objects. That is precise but it never exercises axios itself: `headers` is a
+ * plain object in those tests, where a real request carries an `AxiosHeaders` instance.
+ *
+ * These go through the full pipeline against a stub adapter, so header handling is checked
+ * against the types axios actually produces. Without them, a break in that integration -
+ * an axios release changing `AxiosHeaders`, say - would pass the rest of the suite.
+ */
+describe('axiosLargeResponse through a real axios instance', () => {
+  const options = (
+    overrides: Partial<Required<AxiosLargeResponseOptions>> = {},
+  ): Required<AxiosLargeResponseOptions> => ({
+    enabled: true,
+    disableWarnings: true,
+    debug: false,
+    headerFlag: LARGE_PAYLOAD_MIME_TYPE,
+    refProperty: '$payload_ref',
+    logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn() },
+    onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({ huge: 'payload' }),
+    errorPayload: undefined,
+    ...overrides,
+  });
+
+  /**
+   * Returns the instance plus the config the adapter was handed, so assertions can be made
+   * about what would have gone on the wire.
+   */
+  const instanceWithStubAdapter = (response: { headers: unknown; data: unknown }) => {
+    const instance = axios.create();
+    const seen: { headers?: unknown } = {};
+
+    instance.defaults.adapter = async (config) => {
+      seen.headers = config.headers;
+
+      return {
+        status: 200,
+        statusText: 'OK',
+        config,
+        headers: axios.AxiosHeaders.from(response.headers as Record<string, string>),
+        data: response.data,
+      };
+    };
+
+    return { instance, seen };
+  };
+
+  it('should resolve an envelope end to end', async () => {
+    // given
+    const { instance } = instanceWithStubAdapter({
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+
+    axiosLargeResponse(instance, options());
+
+    // when
+    const response = await instance.get('https://api.example.com/data');
+
+    // then
+    expect(response.data).toEqual({ huge: 'payload' });
+  });
+
+  it('should leave a normal response untouched end to end', async () => {
+    // given
+    const globalOptions = options();
+    const { instance } = instanceWithStubAdapter({
+      headers: { 'content-type': 'application/json' },
+      data: { foo: 'bar' },
+    });
+
+    axiosLargeResponse(instance, globalOptions);
+
+    // when
+    const response = await instance.get('https://api.example.com/data');
+
+    // then
+    expect(response.data).toEqual({ foo: 'bar' });
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The middleware matches `Accept` by exact value. The request interceptor assigns the
+   * flag directly, relying on axios to collapse a pre-existing lowercase `accept` before
+   * dispatch - if a release stopped doing that, two variants would travel together and the
+   * server could read the wrong one.
+   */
+  it('should send exactly one Accept header when the request already set one', async () => {
+    // given
+    const { instance, seen } = instanceWithStubAdapter({
+      headers: { 'content-type': 'application/json' },
+      data: { foo: 'bar' },
+    });
+
+    axiosLargeResponse(instance, options());
+
+    // when
+    await instance.get('https://api.example.com/data', { headers: { accept: 'application/json' } });
+
+    // then
+    const headers = seen.headers as { toJSON: () => Record<string, string> };
+    const bag = headers.toJSON();
+    const acceptKeys = Object.keys(bag).filter((key) => key.toLowerCase() === 'accept');
+
+    expect(acceptKeys).toHaveLength(1);
+    expect(bag[acceptKeys[0]]).toEqual(LARGE_PAYLOAD_MIME_TYPE);
+  });
+});

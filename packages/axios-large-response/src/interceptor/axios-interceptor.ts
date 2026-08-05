@@ -1,5 +1,5 @@
-import type { AxiosLargeResponse, AxiosLargeResponseRequestOptions, LargePayloadResponse } from '../types';
-import { NAMESPACE, getOptions, isDebugEnabled, usageWarnings } from '../utils/utils';
+import type { AxiosLargeResponse, AxiosLargeResponseRequestOptions } from '../types';
+import { NAMESPACE, getOptions, resolveLargePayload, usageWarnings } from '../utils/utils';
 
 /**
  * This is the main function that adds the interceptors to the axios instance.
@@ -24,42 +24,14 @@ const axiosLargeResponse: AxiosLargeResponse = (axiosInstance, globalOptions) =>
 
   // response interceptor
   const responseInterceptorId = axiosInstance.interceptors.response.use(async (response) => {
-    const configRequestOptions = response?.config?.[NAMESPACE];
-    const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled, errorPayload } = getOptions(
-      configRequestOptions,
-      globalOptions,
-    );
+    const options = getOptions(response?.config?.[NAMESPACE], globalOptions);
 
-    if (!enabled) {
+    if (!options.enabled) {
       return response;
     }
 
-    if (
-      response.headers['content-type'] === headerFlag &&
-      response.data &&
-      (response.data as LargePayloadResponse)[refProperty]
-    ) {
-      if (isDebugEnabled(debug)) {
-        logger.debug('[axios-large-response] Fetching large payload from ref url', {
-          ref: (response.data as LargePayloadResponse)[refProperty],
-        });
-      }
-      try {
-        response.data = await onFetchLargePayloadFromRef((response.data as LargePayloadResponse)[refProperty]);
-      } catch (error) {
-        logger.error('[axios-large-response] Error fetching large payload from ref url', {
-          reason: error instanceof Error ? error.message : 'unknown',
-        });
+    await resolveLargePayload(response, options);
 
-        if (errorPayload) {
-          response.data = errorPayload;
-
-          return response;
-        }
-
-        throw error;
-      }
-    }
     return response;
   });
 
