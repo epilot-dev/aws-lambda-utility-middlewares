@@ -1,14 +1,14 @@
+import { AxiosHeaders, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AxiosLargeResponseOptions } from '../types';
-import { LARGE_PAYLOAD_MIME_TYPE } from '../utils/utils';
+import { LARGE_PAYLOAD_MIME_TYPE, NAMESPACE } from '../utils/utils';
 import { withLargeResponse } from './large-response-runner';
 
 /**
  * Test suite for the withLargeResponse runner wrapper.
  *
- * The runner is deliberately described structurally, so these tests use a plain object
- * rather than any transport-specific runner - no AWS Lambda or openapi-client-axios
- * types are needed to exercise the contract.
+ * The runner is described structurally, so a plain object stands in for any
+ * transport-specific runner.
  */
 describe('withLargeResponse', () => {
   let runRequest: ReturnType<typeof vi.fn>;
@@ -36,12 +36,9 @@ describe('withLargeResponse', () => {
   });
 
   /**
-   * The runner's other members are part of its contract and must survive wrapping.
-   *
+   * The runner's other members are part of its contract and must survive wrapping:
    * openapi-client-axios invokes a registered runner as
-   * `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads
-   * the target function name off that context. A wrapper returning only `runRequest`
-   * would strip it and leave every request without a target.
+   * `runner.runRequest(request, operation, runner.context)`.
    */
   it('should preserve other members of the wrapped runner', () => {
     // given
@@ -52,6 +49,61 @@ describe('withLargeResponse', () => {
 
     // then
     expect(wrapped.context).toEqual(context);
+  });
+
+  /**
+   * A frozen or sealed runner contributes a non-configurable `runRequest` descriptor, so
+   * the replacement has to be overridden as the copy is built rather than redefined on it.
+   */
+  it.each([
+    ['frozen', Object.freeze],
+    ['sealed', Object.seal],
+  ])('should wrap a %s runner', async (_label, harden) => {
+    // given
+    const context = { functionName: 'my-lambda' };
+    const runner = harden({ runRequest, context });
+
+    // when
+    const wrapped = withLargeResponse(runner, globalOptions);
+    const response = await wrapped.runRequest({ headers: {} });
+
+    // then
+    expect(wrapped.context).toEqual(context);
+    expect(response.data).toEqual({ foo: 'bar' });
+  });
+
+  /**
+   * A concretely typed runner, unlike a vi.fn() double, actually exercises the generic
+   * signature: a runner declaring narrower request/response types must still be accepted,
+   * and its sibling members must survive wrapping at the type level, not just at runtime.
+   */
+  it('should accept a concretely typed runner and keep its members typed', async () => {
+    // given
+    type Operation = { operationId: string };
+    type LambdaContext = { functionName: string };
+
+    const lambdaRunner = {
+      context: { functionName: 'my-lambda' } satisfies LambdaContext,
+      runRequest: async (
+        _request: AxiosRequestConfig,
+        _operation: Operation,
+        _context: LambdaContext,
+      ): Promise<AxiosResponse> =>
+        ({
+          status: 200,
+          headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+          data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+        }) as unknown as AxiosResponse,
+    };
+
+    // when
+    const wrapped = withLargeResponse(lambdaRunner, globalOptions);
+    const functionName: string = wrapped.context.functionName;
+    const response = await wrapped.runRequest({}, { operationId: 'getThings' }, wrapped.context);
+
+    // then
+    expect(functionName).toEqual('my-lambda');
+    expect(response.data).toEqual({ huge: 'data' });
   });
 
   /**
@@ -271,5 +323,265 @@ describe('withLargeResponse', () => {
 
     // then
     expect(runRequest.mock.calls[0][0].headers.Accept).toEqual(LARGE_PAYLOAD_MIME_TYPE);
+  });
+
+  /**
+   * A class-based runner must keep working: `runRequest` stays bound to the original, and
+   * prototype methods and class identity survive. Arrow-function doubles never catch this.
+   */
+  it('should keep a class-based runner working, with its prototype intact', async () => {
+    // given
+    class LambdaRunner {
+      constructor(public context: { functionName: string }) {}
+
+      async runRequest(_request: unknown) {
+        return {
+          headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+          data: { $payload_ref: `https://bucket.s3.amazonaws.com/${this.context.functionName}` },
+        };
+      }
+
+      getFunctionName() {
+        return this.context.functionName;
+      }
+    }
+
+    const runner = new LambdaRunner({ functionName: 'my-lambda' });
+
+    // when
+    const wrapped = withLargeResponse(runner, globalOptions);
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(wrapped.getFunctionName()).toEqual('my-lambda');
+    expect(wrapped instanceof LambdaRunner).toBe(true);
+    expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith('https://bucket.s3.amazonaws.com/my-lambda');
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  /**
+   * Header containers need not store values as own enumerable properties - a WHATWG
+   * `Headers` from a fetch-based runner exposes them only through `entries()`.
+   */
+  it('should detect the flag on a WHATWG Headers container', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: new Headers({ 'content-type': LARGE_PAYLOAD_MIME_TYPE }),
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  /**
+   * The counterpart to the WHATWG case, and the one that actually ships: axios' own
+   * `AxiosHeaders` keeps values as own enumerable properties and has no `entries()`, so it
+   * must fall through to `Object.entries`. Pinned against the real type rather than a plain
+   * object, so an axios release that adds `entries()` fails here instead of silently
+   * changing which branch runs.
+   */
+  it('should detect the flag on an AxiosHeaders container', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: AxiosHeaders.from({ 'content-type': LARGE_PAYLOAD_MIME_TYPE }),
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  /**
+   * A `Map` is the other shape that hides its values behind `entries()`.
+   */
+  it('should detect the flag on a Map container', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: new Map([['content-type', LARGE_PAYLOAD_MIME_TYPE]]),
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  /**
+   * Own property descriptors are carried over, not just own enumerable values, so a runner
+   * member hidden from enumeration still survives wrapping.
+   */
+  it('should preserve a non-enumerable member of the wrapped runner', () => {
+    // given
+    const runner: { runRequest: typeof runRequest; hidden?: string } = { runRequest };
+
+    Object.defineProperty(runner, 'hidden', { value: 'kept', enumerable: false });
+
+    // when
+    const wrapped = withLargeResponse(runner, globalOptions);
+
+    // then
+    expect(wrapped.hidden).toEqual('kept');
+    expect(Object.keys(wrapped)).not.toContain('hidden');
+  });
+
+  /**
+   * Deliberate asymmetry with the interceptor, pinned so it stays a decision rather than a
+   * surprise: the interceptor can be disabled globally and enabled per request, but a
+   * disabled wrapper is never installed, so there is nothing left to read the request.
+   * Wrap with `enabled: true` and opt individual requests out instead.
+   */
+  it('should not let a per-request enabled re-enable a globally disabled wrapper', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, { ...globalOptions, enabled: false });
+
+    // when
+    const response = await wrapped.runRequest({ [NAMESPACE]: { enabled: true } });
+
+    // then
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+    expect(response.data).toEqual({ $payload_ref: 'https://bucket.s3.amazonaws.com/ref' });
+  });
+
+  /**
+   * A runner that does not parse the proxy body leaves the envelope as a JSON string;
+   * treating that as "not an envelope" would skip the fetch in the case this exists for.
+   */
+  it('should resolve an envelope the transport left as an unparsed JSON string', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: JSON.stringify({ $payload_ref: 'https://bucket.s3.amazonaws.com/ref' }),
+    });
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  /**
+   * `errorPayload` is "configured" whenever it is not undefined - a falsy value is a
+   * deliberate degraded payload, not an absent option.
+   */
+  it('should degrade to a falsy errorPayload rather than throwing', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    globalOptions.onFetchLargePayloadFromRef = vi.fn().mockRejectedValue(new Error('s3 down'));
+    globalOptions.errorPayload = null;
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toBeNull();
+  });
+
+  /**
+   * `headerFlag` is a caller-supplied option: it may arrive with media-type parameters, and
+   * it may be present but undefined (an unset env var spread over the defaults).
+   */
+  it('should match a headerFlag that carries media type parameters', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse(
+      { runRequest },
+      {
+        ...globalOptions,
+        headerFlag: `${LARGE_PAYLOAD_MIME_TYPE}; charset=utf-8`,
+      },
+    );
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(response.data).toEqual({ huge: 'data' });
+  });
+
+  it('should pass responses through when headerFlag is undefined, rather than throwing', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: {},
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, { ...globalOptions, headerFlag: undefined });
+
+    // when
+    const response = await wrapped.runRequest({});
+
+    // then
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+    expect(response.data).toEqual({ $payload_ref: 'https://bucket.s3.amazonaws.com/ref' });
+  });
+
+  /**
+   * The runner honours the same per-request options channel as the interceptor, and strips
+   * it from the forwarded request so it never reaches the transport as payload.
+   */
+  it('should honour per-request options and strip them from the forwarded request', async () => {
+    // given
+    runRequest.mockResolvedValue({
+      status: 200,
+      headers: { 'content-type': LARGE_PAYLOAD_MIME_TYPE },
+      data: { $payload_ref: 'https://bucket.s3.amazonaws.com/ref' },
+    });
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    const response = await wrapped.runRequest({
+      [NAMESPACE]: { onFetchLargePayloadFromRef: vi.fn().mockResolvedValue({ perRequest: true }) },
+    });
+
+    // then
+    expect(response.data).toEqual({ perRequest: true });
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+    expect(Object.keys(runRequest.mock.calls[0][0])).toEqual(['headers']);
+  });
+
+  /**
+   * A per-request `enabled: false` opts a single request out, as on the interceptor path.
+   */
+  it('should let a per-request enabled false opt out of a single request', async () => {
+    // given
+    const wrapped = withLargeResponse({ runRequest }, globalOptions);
+
+    // when
+    await wrapped.runRequest({ headers: { accept: 'application/json' }, [NAMESPACE]: { enabled: false } });
+
+    // then
+    expect(runRequest.mock.calls[0][0].headers).toEqual({ accept: 'application/json' });
   });
 });

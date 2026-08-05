@@ -71,17 +71,25 @@ import { getLambdaRunner } from 'openapi-lambda-adapter';
 client.api.registerRunner(
   withLargeResponse(getLambdaRunner(lambdaName, context), {
     enabled: true,
-    // ... same options as the interceptor, except per-request ones
+    // ... same options as the interceptor
   }),
 );
 ```
 
-The runner is described structurally - anything with a `runRequest(request, ...rest)` method qualifies - so this is not tied to AWS Lambda, or to any particular transport. HTTP clients, in-process calls and test doubles all work, and trailing arguments (such as `openapi-client-axios`' `operation` and `context`) are passed through untouched. The package gains no dependency beyond `axios` as a result.
+The runner is described structurally - anything with a `runRequest(request, ...rest)` method whose first argument is an object qualifies - so this is not tied to AWS Lambda, or to any particular transport. HTTP clients, in-process calls and test doubles all work, and trailing arguments (such as `openapi-client-axios`' `operation` and `context`) are passed through untouched. The package gains no dependency beyond `axios` as a result.
 
-Two differences from the interceptor:
+Per-request options work as they do on the interceptor: set them under the `axios-large-response` key on the request and they override the global ones for that call. The key is stripped before the request reaches your runner.
 
-- **`enabled` is resolved once**, when the runner is wrapped, rather than per request - a runner has no per-request options channel. When disabled, the original runner is returned untouched.
-- **Other members of the runner are preserved.** This matters: `openapi-client-axios` invokes a registered runner as `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads the target function name off that `context`. Wrap your runner rather than rebuilding it, and it survives.
+```ts
+client.getThings({}, null, {
+  'axios-large-response': { onFetchLargePayloadFromRef: myAuthenticatedFetch },
+});
+```
+
+Two notes:
+
+- **`enabled` is read once at wrap time** to decide whether to wrap at all - when it is `false`, the original runner is returned untouched with zero overhead. A per-request `enabled: false` still opts an individual call out.
+- **The wrapped runner keeps the original's prototype and own properties.** This matters: `openapi-client-axios` invokes a registered runner as `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads the target function name off that `context`. Class instances keep their methods and their identity, and `runRequest` stays bound to the original, so a method that reads `this` still works. Wrap your runner rather than rebuilding it.
 
 ## Options
 
@@ -93,7 +101,7 @@ Two differences from the interceptor:
 | debug | Boolean | false | Enable debug logging |
 | logger | Object | console | Logger object with debug(), error() and warn() methods |
 | onFetchLargePayloadFromRef | Function | Fetches the reference URL and returns the full payload | Callback function to fetch the full payload from the reference URL |
-| errorPayload | Unknown/Any | undefined | Error payload to return if the reference URL is not found or something goes wrong - this will be returned in the response data instead of throwing an error |
+| errorPayload | Unknown/Any | undefined | Error payload to return if the reference URL is not found or something goes wrong - this will be returned in the response data instead of throwing an error. Any value other than `undefined` counts as configured, falsy ones (`null`, `0`, `''`, `false`) included |
 | disableWarnings | Boolean | false | Disable warnings, only available globally in the options |
 
 For debug purposes, you can also set the `AXIOS_INTERCEPTOR_LARGE_RESPONSE_DEBUG` environment variable to `true` or `1` to enable debug logging.

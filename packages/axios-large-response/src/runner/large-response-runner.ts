@@ -1,27 +1,38 @@
-import type { AxiosLargeResponseOptions, LargeResponseRunner, RunnerRequest, RunnerResponse } from '../types';
-import { getOptions, isDebugEnabled, resolvePayloadRef, usageWarnings, withAcceptHeader } from '../utils/utils';
+import type {
+  AxiosLargeResponseOptions,
+  AxiosLargeResponseRequestOptions,
+  LargeResponseRunner,
+  RunnerRequest,
+  RunnerResponse,
+  WithObjectRequest,
+} from '../types';
+import { NAMESPACE, getOptions, resolveLargePayload, usageWarnings, withAcceptHeader } from '../utils/utils';
 
 /**
  * Adds large-response support to a transport runner, for clients that do not dispatch
  * through an axios instance.
  *
  * Interceptors only run for requests that go through the axios adapter. A client
- * configured with its own runner - `openapi-client-axios`' `registerRunner`, for
- * instance, which is how service-to-service calls over an AWS Lambda invoke are usually
- * wired - bypasses that adapter entirely, so `axiosLargeResponse` never sees those
- * requests and responses over the transport's payload limit fail with a 413. Wrapping the
- * runner closes that gap.
+ * configured with its own runner - `openapi-client-axios`' `registerRunner`, for instance -
+ * bypasses that adapter entirely, so `axiosLargeResponse` never sees those requests and
+ * responses over the transport's payload limit fail with a 413. Wrapping the runner closes
+ * that gap. See the README for the full rationale.
  *
- * The runner is spread into the returned object, so any other members it carries survive.
- * That matters more than it looks: a runner's sibling properties are frequently part of
- * its contract - `openapi-client-axios` invokes a registered runner as
- * `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads the
- * target function name off that `context`. Returning only `runRequest` would silently
- * strip it and leave every request without a target.
+ * The returned runner keeps the original's prototype and own properties, so class
+ * instances, prototype methods and sibling properties all survive - `openapi-client-axios`
+ * invokes a registered runner as `runner.runRequest(request, operation, runner.context)`,
+ * and the lambda runner reads the target function name off that `context`. `runRequest`
+ * stays bound to the original runner, so a method that reads `this` still works.
  *
- * Unlike the interceptor, `enabled` is resolved once when the runner is wrapped rather
- * than per request, since a runner has no per-request options channel. When disabled the
- * original runner is returned untouched.
+ * Unlike the interceptor, `enabled` is resolved once when the runner is wrapped, since
+ * that decision is what determines whether to wrap at all; when disabled the original
+ * runner is returned untouched. Every other option is resolved per request, read from a
+ * `[NAMESPACE]` key on the request just as the interceptor reads it off the axios config.
+ *
+ * That one difference is worth knowing: a per-request `enabled: false` opts a request out,
+ * but a global `enabled: false` cannot be re-enabled per request the way it can on the
+ * interceptor - there is no wrapper left to read the request. Wrap with `enabled: true` and
+ * opt individual requests out, rather than the other way round.
  *
  * @example
  * ```ts
@@ -30,69 +41,66 @@ import { getOptions, isDebugEnabled, resolvePayloadRef, usageWarnings, withAccep
  * );
  * ```
  */
-const withLargeResponse = <
-  TRequest extends RunnerRequest,
-  TResponse extends RunnerResponse,
-  TRest extends unknown[],
-  TRunner extends LargeResponseRunner<TRequest, TResponse, TRest>,
->(
-  runner: TRunner,
+const withLargeResponse = <TRunner extends LargeResponseRunner>(
+  runner: TRunner & WithObjectRequest<TRunner>,
   globalOptions?: AxiosLargeResponseOptions,
 ): TRunner => {
   // check for warnings
   usageWarnings(globalOptions);
 
-  const { debug, logger, headerFlag, refProperty, onFetchLargePayloadFromRef, enabled, errorPayload } = getOptions(
-    undefined,
-    globalOptions,
-  );
-
-  if (!enabled) {
+  if (!getOptions(undefined, globalOptions).enabled) {
     return runner;
   }
 
-  const runRequest = async (request: TRequest, ...rest: TRest): Promise<TResponse> => {
-    const response = await runner.runRequest(
-      { ...request, headers: withAcceptHeader(request.headers, headerFlag) } as TRequest,
+  // `LargeResponseRunner` accepts any runner shape, so its `runRequest` is not callable as
+  // declared; the wrapper handles requests and responses structurally instead. Bound to the
+  // runner so a `runRequest` that reads `this` keeps working.
+  const dispatch = runner.runRequest.bind(runner) as unknown as (
+    request: RunnerRequest,
+    ...rest: unknown[]
+  ) => Promise<RunnerResponse>;
+
+  const runRequest = async (request: RunnerRequest, ...rest: unknown[]) => {
+    // the per-request options channel the interceptor reads off the axios config; stripped
+    // from the forwarded request so it never reaches the transport as payload
+    const { [NAMESPACE]: requestOptions, ...forwarded } = (request ?? {}) as RunnerRequest & {
+      [NAMESPACE]?: AxiosLargeResponseRequestOptions;
+    };
+
+    const options = getOptions(requestOptions, globalOptions);
+
+    // a per-request `enabled: false` opts this one request out, as it does on the
+    // interceptor path
+    if (!options.enabled) {
+      return dispatch(forwarded, ...rest);
+    }
+
+    const response = await dispatch(
+      { ...forwarded, headers: withAcceptHeader(forwarded.headers, options.headerFlag) },
       ...rest,
     );
 
-    const payloadRef = resolvePayloadRef(response, headerFlag, refProperty);
-
-    if (!payloadRef) {
-      return response;
-    }
-
-    if (isDebugEnabled(debug)) {
-      logger.debug('[axios-large-response] Fetching large payload from ref url', { ref: payloadRef });
-    }
-
-    // narrowed to the one member being replaced: TResponse may declare `data` as a
-    // concrete type, and the resolved payload is only known to be unknown
-    const mutableResponse = response as RunnerResponse;
-
-    try {
-      mutableResponse.data = await onFetchLargePayloadFromRef(payloadRef);
-    } catch (error) {
-      logger.error('[axios-large-response] Error fetching large payload from ref url', {
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-
-      if (errorPayload) {
-        mutableResponse.data = errorPayload;
-
-        return response;
-      }
-
-      throw error;
-    }
+    await resolveLargePayload(response, options);
 
     return response;
   };
 
-  // a spread-and-override object literal is not provably assignable to the caller's
-  // narrower TRunner, so the shape is asserted here rather than in every consumer
-  return { ...runner, runRequest } as TRunner;
+  // own property descriptors and prototype are carried over so class-based runners keep
+  // their methods and their identity; `runRequest` is defined as an own property, which
+  // shadows a prototype method of the same name.
+  //
+  // It is overridden in the descriptor map rather than redefined afterwards: a frozen or
+  // sealed runner contributes a non-configurable `runRequest` descriptor, and redefining
+  // that on the copy throws. Building the map first also leaves the original untouched.
+  return Object.create(Object.getPrototypeOf(runner), {
+    ...Object.getOwnPropertyDescriptors(runner),
+    runRequest: {
+      value: runRequest,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    },
+  }) as TRunner;
 };
 
 export { withLargeResponse };

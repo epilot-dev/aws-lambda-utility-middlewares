@@ -83,6 +83,42 @@ describe('getOptions', () => {
     const options = getOptions();
     expect(options).toEqual(DEFAULT_OPTIONS);
   });
+
+  /**
+   * A key present with an undefined value means "not specified". Letting it shadow the
+   * default leaves the merged options claiming a type they do not have - an undefined
+   * `logger` then throws while reporting a failed ref fetch and masks the original error.
+   */
+  it('should not let explicitly undefined options shadow the defaults', () => {
+    const options = getOptions(undefined, {
+      enabled: true,
+      headerFlag: undefined,
+      logger: undefined,
+      refProperty: undefined,
+      onFetchLargePayloadFromRef: undefined,
+    });
+
+    expect(options.headerFlag).toEqual(DEFAULT_OPTIONS.headerFlag);
+    expect(options.logger).toBe(DEFAULT_OPTIONS.logger);
+    expect(options.refProperty).toEqual(DEFAULT_OPTIONS.refProperty);
+    expect(options.onFetchLargePayloadFromRef).toBe(DEFAULT_OPTIONS.onFetchLargePayloadFromRef);
+    expect(options.enabled).toBe(true);
+  });
+
+  /**
+   * The same applies per request: `enabled: undefined` must not silently disable a
+   * globally-enabled client, while an explicit `false` still must.
+   */
+  it('should not let an undefined per-request option shadow a global one', () => {
+    const globalOptions = { enabled: true, refProperty: 'global_ref' } satisfies AxiosLargeResponseOptions;
+
+    expect(getOptions({ enabled: undefined, refProperty: undefined }, globalOptions)).toMatchObject({
+      enabled: true,
+      refProperty: 'global_ref',
+    });
+
+    expect(getOptions({ enabled: false }, globalOptions).enabled).toBe(false);
+  });
 });
 
 describe('usageWarnings', () => {
