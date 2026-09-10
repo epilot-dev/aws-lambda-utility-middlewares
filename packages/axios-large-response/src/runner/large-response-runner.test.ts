@@ -296,9 +296,10 @@ describe('withLargeResponse', () => {
   });
 
   /**
-   * Disabled means untouched - no wrapper, no Accept header, no overhead.
+   * Globally disabled is a no-op for an ordinary request: the request is forwarded as it
+   * came in, without the flag on Accept, and no ref is fetched.
    */
-  it('should return the original runner when disabled', async () => {
+  it('should leave a request untouched when globally disabled', async () => {
     // given
     const runner = { runRequest, context: { functionName: 'my-lambda' } };
 
@@ -307,8 +308,9 @@ describe('withLargeResponse', () => {
     await wrapped.runRequest({ headers: { accept: 'application/json' } });
 
     // then
-    expect(wrapped).toBe(runner);
     expect(runRequest.mock.calls[0][0].headers).toEqual({ accept: 'application/json' });
+    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
+    expect(wrapped.context).toEqual({ functionName: 'my-lambda' });
   });
 
   /**
@@ -440,12 +442,11 @@ describe('withLargeResponse', () => {
   });
 
   /**
-   * Deliberate asymmetry with the interceptor, pinned so it stays a decision rather than a
-   * surprise: the interceptor can be disabled globally and enabled per request, but a
-   * disabled wrapper is never installed, so there is nothing left to read the request.
-   * Wrap with `enabled: true` and opt individual requests out instead.
+   * `enabled` is resolved per request on both paths, so the interceptor's headline
+   * combination - disabled globally, enabled for the requests that need it - works on a
+   * runner too.
    */
-  it('should not let a per-request enabled re-enable a globally disabled wrapper', async () => {
+  it('should let a per-request enabled re-enable a globally disabled wrapper', async () => {
     // given
     runRequest.mockResolvedValue({
       status: 200,
@@ -458,8 +459,25 @@ describe('withLargeResponse', () => {
     const response = await wrapped.runRequest({ [NAMESPACE]: { enabled: true } });
 
     // then
-    expect(globalOptions.onFetchLargePayloadFromRef).not.toHaveBeenCalled();
-    expect(response.data).toEqual({ $payload_ref: 'https://bucket.s3.amazonaws.com/ref' });
+    expect(globalOptions.onFetchLargePayloadFromRef).toHaveBeenCalledWith('https://bucket.s3.amazonaws.com/ref');
+    expect(response.data).toEqual({ huge: 'data' });
+    expect(runRequest.mock.calls[0][0].headers).toEqual({ Accept: LARGE_PAYLOAD_MIME_TYPE });
+  });
+
+  /**
+   * The per-request options are ours, not the transport's, so they are stripped even from a
+   * request that stays disabled - otherwise a runner that serialises the whole request
+   * sends them on as payload.
+   */
+  it('should strip the per-request options from a request that stays disabled', async () => {
+    // given
+    const wrapped = withLargeResponse({ runRequest }, { ...globalOptions, enabled: false });
+
+    // when
+    await wrapped.runRequest({ headers: { accept: 'application/json' }, [NAMESPACE]: { debug: true } });
+
+    // then
+    expect(Object.keys(runRequest.mock.calls[0][0])).toEqual(['headers']);
   });
 
   /**

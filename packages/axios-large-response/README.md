@@ -86,9 +86,18 @@ client.getThings({}, null, {
 });
 ```
 
-Two notes:
+`enabled` works per request too, so the combination from Example 1 above - disabled globally, enabled only for the calls that need it - works on a runner as well:
 
-- **`enabled` is read once at wrap time** to decide whether to wrap at all - when it is `false`, the original runner is returned untouched with zero overhead. A per-request `enabled: false` still opts an individual call out.
+```ts
+client.api.registerRunner(withLargeResponse(getLambdaRunner(lambdaName, context)));
+...
+client.getThings({}, null, {
+  'axios-large-response': { enabled: true },
+});
+```
+
+One note:
+
 - **The wrapped runner keeps the original's prototype and own properties.** This matters: `openapi-client-axios` invokes a registered runner as `runner.runRequest(request, operation, runner.context)`, and the lambda runner reads the target function name off that `context`. Class instances keep their methods and their identity, and `runRequest` stays bound to the original, so a method that reads `this` still works. Wrap your runner rather than rebuilding it.
 
 ## Options

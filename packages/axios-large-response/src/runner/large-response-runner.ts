@@ -24,15 +24,12 @@ import { NAMESPACE, getOptions, resolveLargePayload, usageWarnings, withAcceptHe
  * and the lambda runner reads the target function name off that `context`. `runRequest`
  * stays bound to the original runner, so a method that reads `this` still works.
  *
- * Unlike the interceptor, `enabled` is resolved once when the runner is wrapped, since
- * that decision is what determines whether to wrap at all; when disabled the original
- * runner is returned untouched. Every other option is resolved per request, read from a
- * `[NAMESPACE]` key on the request just as the interceptor reads it off the axios config.
- *
- * That one difference is worth knowing: a per-request `enabled: false` opts a request out,
- * but a global `enabled: false` cannot be re-enabled per request the way it can on the
- * interceptor - there is no wrapper left to read the request. Wrap with `enabled: true` and
- * opt individual requests out, rather than the other way round.
+ * Every option is resolved per request, `enabled` included, read from a `[NAMESPACE]` key
+ * on the request just as the interceptor reads it off the axios config. So the same
+ * combinations work on both paths: enable globally and opt individual requests out with
+ * `enabled: false`, or leave it disabled and opt the requests that need it in with
+ * `enabled: true`. The key is stripped from the forwarded request either way, so it never
+ * reaches the transport as payload.
  *
  * @example
  * ```ts
@@ -47,10 +44,6 @@ const withLargeResponse = <TRunner extends LargeResponseRunner>(
 ): TRunner => {
   // check for warnings
   usageWarnings(globalOptions);
-
-  if (!getOptions(undefined, globalOptions).enabled) {
-    return runner;
-  }
 
   // `LargeResponseRunner` accepts any runner shape, so its `runRequest` is not callable as
   // declared; the wrapper handles requests and responses structurally instead. Bound to the
@@ -69,8 +62,8 @@ const withLargeResponse = <TRunner extends LargeResponseRunner>(
 
     const options = getOptions(requestOptions, globalOptions);
 
-    // a per-request `enabled: false` opts this one request out, as it does on the
-    // interceptor path
+    // resolved from both layers, so a per-request `enabled` decides this one call either
+    // way, exactly as it does on the interceptor path
     if (!options.enabled) {
       return dispatch(forwarded, ...rest);
     }
